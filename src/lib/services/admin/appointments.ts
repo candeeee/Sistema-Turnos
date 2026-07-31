@@ -13,15 +13,16 @@ export type AdminAppointment = Tables<'appointments'> & {
 }
 
 /**
- * Las dos formas del select se declaran como literales constantes (`as const`)
- * para que supabase-js pueda inferir la forma de la respuesta a partir del
- * esquema. Una cadena armada dinámicamente se tipa como `string` y la
- * inferencia se cae, que es lo que antes obligaba a castear el resultado.
+ * El select se declara como literal constante para que supabase-js infiera la
+ * forma de la respuesta: una cadena armada dinámicamente se tipa como `string`
+ * y la inferencia se cae.
+ *
+ * El join con `clients` es `!inner` siempre. No descarta ninguna fila porque
+ * `appointments.client_id` es NOT NULL con clave foránea, y es lo que permite
+ * filtrar por nombre, teléfono o email del cliente sin necesitar una segunda
+ * variante del select.
  */
-const SELECT = '*, service:services(id, name, duration_min), client:clients(id, full_name, phone, email)' as const
-
-/** Con `!inner`, PostgREST permite filtrar por columnas del cliente. */
-const SELECT_CON_BUSQUEDA =
+const SELECT =
   '*, service:services(id, name, duration_min), client:clients!inner(id, full_name, phone, email)' as const
 
 export type AppointmentFilters = {
@@ -43,12 +44,7 @@ export async function listAppointments(
   const supabase = await createClient()
   const search = filters.search?.trim()
 
-  let query = (search
-    ? supabase.from('appointments').select(SELECT_CON_BUSQUEDA)
-    : supabase.from('appointments').select(SELECT)
-  )
-    .order('starts_at', { ascending: false })
-    .limit(limit)
+  let query = supabase.from('appointments').select(SELECT)
 
   if (filters.status && filters.status !== 'all') {
     query = query.eq('status', filters.status)
@@ -73,7 +69,12 @@ export async function listAppointments(
     )
   }
 
+  // El orden importa: `.returns()` produce un builder de transformación que ya
+  // no acepta filtros, así que va al final de la cadena.
   const { data, error } = await query
+    .order('starts_at', { ascending: false })
+    .limit(limit)
+    .returns<AdminAppointment[]>()
 
   if (error) {
     throw new DataError('listAppointments', error, { filters })
@@ -94,6 +95,7 @@ export async function getAppointmentsInRange(
     .gte('starts_at', fromIso)
     .lt('starts_at', toIso)
     .order('starts_at')
+    .returns<AdminAppointment[]>()
 
   if (error) {
     throw new DataError('getAppointmentsInRange', error, { fromIso, toIso })
@@ -110,6 +112,7 @@ export async function getClientAppointments(clientId: string): Promise<AdminAppo
     .select(SELECT)
     .eq('client_id', clientId)
     .order('starts_at', { ascending: false })
+    .returns<AdminAppointment[]>()
 
   if (error) {
     throw new DataError('getClientAppointments', error, { clientId })

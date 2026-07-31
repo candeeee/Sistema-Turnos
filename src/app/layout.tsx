@@ -30,14 +30,33 @@ export const viewport: Viewport = {
   maximumScale: 5,
 }
 
-/** Los metadatos salen de la configuración del negocio, no de constantes. */
+/**
+ * Los metadatos salen de la configuración del negocio, no de constantes.
+ *
+ * Esta función corre durante `next build`. Si la base no responde en ese
+ * momento —variables sin cargar en el hosting, proyecto pausado, migraciones a
+ * medio aplicar— el build fallaría entero por un título de página. Los
+ * metadatos son decorativos: ante un fallo se degradan y el deploy sigue. El
+ * problema real se ve igual, en el log del build y en /admin/diagnostico.
+ */
 export async function generateMetadata(): Promise<Metadata> {
-  const settings = await getBusinessSettings()
-  const name = settings.name || 'Reservá tu turno'
+  let settings: Awaited<ReturnType<typeof getBusinessSettings>> | null = null
+
+  try {
+    settings = await getBusinessSettings()
+  } catch (error) {
+    console.error(
+      '\n✖ [generateMetadata] No se pudo leer la configuración del negocio. ' +
+        'Se usan metadatos por defecto.',
+      error,
+    )
+  }
+
+  const name = settings?.name || 'Reservá tu turno'
 
   return {
     title: { default: name, template: `%s · ${name}` },
-    description: settings.address
+    description: settings?.address
       ? `Reservá tu turno online en ${name}. ${settings.address}.`
       : `Reservá tu turno online en ${name}.`,
     openGraph: { title: name, type: 'website', locale: 'es_AR' },

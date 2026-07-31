@@ -31,14 +31,17 @@ const PREVIEW = {
  */
 function MessageField({
   name,
+  messageKey,
   label,
   description,
   defaultValue,
   businessName,
   alias,
 }: {
-  /** Coincide con la columna de business_settings: es la clave del respaldo. */
-  name: MessageKey
+  /** Nombre del campo del formulario. Lo lee Zod en la Server Action. */
+  name: 'messageConfirmation' | 'messageReminder' | 'messageCancellation' | 'messageStatusChange'
+  /** Columna de business_settings. Es la clave del texto por defecto. */
+  messageKey: MessageKey
   label: string
   description: string
   defaultValue: string | null | undefined
@@ -51,7 +54,7 @@ function MessageField({
   const [value, setValue] = useState(
     typeof defaultValue === 'string' && defaultValue.trim() !== ''
       ? defaultValue
-      : DEFAULT_MESSAGES[name],
+      : DEFAULT_MESSAGES[messageKey],
   )
 
   const preview = renderTemplate(value, {
@@ -223,6 +226,7 @@ export function NotificationsForm({ settings }: { settings: BusinessSettings }) 
         <div className="flex flex-col gap-4">
           <MessageField
             name="messageConfirmation"
+            messageKey="message_confirmation"
             label="Confirmación del turno"
             description="Se manda cuando registrás la seña y el turno pasa a confirmado."
             defaultValue={settings.message_confirmation}
@@ -232,6 +236,7 @@ export function NotificationsForm({ settings }: { settings: BusinessSettings }) 
 
           <MessageField
             name="messageReminder"
+            messageKey="message_reminder"
             label="Recordatorio"
             description="El aviso previo al turno. Lo usan los dos recordatorios."
             defaultValue={settings.message_reminder}
@@ -241,6 +246,7 @@ export function NotificationsForm({ settings }: { settings: BusinessSettings }) 
 
           <MessageField
             name="messageCancellation"
+            messageKey="message_cancellation"
             label="Cancelación"
             description="Cuando el negocio cancela un turno."
             defaultValue={settings.message_cancellation}
@@ -250,6 +256,7 @@ export function NotificationsForm({ settings }: { settings: BusinessSettings }) 
 
           <MessageField
             name="messageStatusChange"
+            messageKey="message_status_change"
             label="Cambio de estado"
             description="Para cualquier otro cambio: reprogramaciones, ausencias, turnos finalizados."
             defaultValue={settings.message_status_change}

@@ -116,6 +116,9 @@ npm run dev
 | `npm run typecheck` | Verifica tipos sin compilar |
 | `npm run check:env` | Valida `.env.local` y prueba la conexión real con Supabase |
 | `npm run check:types` | Verifica que `database.types.ts` siga siendo un archivo generado |
+| `npm run check:deps` | Confirma que las versiones de Supabase sean las declaradas |
+| `npm run check:queries` | Busca `select()` sin literal, que rompen la inferencia |
+| `npm run verify` | Corre la misma secuencia que Vercel: tipos, consultas y build |
 | `npm run db:push` | Aplica las migraciones pendientes |
 | `npm run db:reset` | Recrea la base local desde cero |
 | `npm run db:types` | Regenera `src/types/database.types.ts` desde el esquema real |
@@ -440,6 +443,13 @@ mezclarse, y el middleware la respalda: un administrador que escriba
 
 ## 8. Decisiones técnicas
 
+**¿Por qué las versiones de Supabase están fijadas exactas?**
+Porque el archivo de tipos solo puede coincidir con un sistema de tipos, y
+`@supabase/supabase-js` cambió el suyo entre versiones menores. Con un rango
+abierto, `npm install` en otra máquina —o en Vercel— puede traer una versión
+distinta y romper el build sin que nadie haya tocado una línea. Las
+dependencias de las que depende el tipado no llevan `^`.
+
 **¿Por qué los tipos generados y los propios viven separados?**
 Porque `npm run db:types` sobrescribe el archivo entero. Con todo mezclado,
 regenerar borra el código escrito a mano, así que en la práctica nadie
@@ -736,6 +746,52 @@ se verifica ahora en tiempo de ejecución en `getDashboardStats()`, con un
 mensaje que nombra la clave faltante, en lugar de afirmarla con un `as` que
 TypeScript aceptaría sin comprobar nada.
 
+**Segunda causa del mismo síntoma: la versión de la librería.**
+`@supabase/supabase-js` cambió su sistema de tipos entre versiones menores. A
+partir de la 2.49 el tipo `Database` necesita otra forma, y el archivo de
+tipos —hecho para una— deja de encajar con la otra. El síntoma es
+inconfundible en el mensaje de error:
+
+```
+PostgrestTransformBuilder<{ PostgrestVersion: "12"; }, never, never, ...>
+                            └── existe solo en las versiones nuevas
+```
+
+Con `never` en la posición del esquema, **toda** consulta del proyecto falla:
+`.update()` recibe `never`, `.rpc()` recibe `undefined`, cada columna
+"no existe". Cincuenta errores repartidos en dieciocho archivos, ninguno
+señalando la causa.
+
+Un rango abierto (`^2.45.4`) deja que npm elija. Por eso las dos dependencias
+de Supabase están **fijadas en versiones exactas** y `npm run check:deps`
+confirma que lo instalado sea lo declarado.
+
+Si querés actualizar Supabase, actualizá también los tipos:
+
+```bash
+npm install @supabase/supabase-js@latest @supabase/ssr@latest
+npm run db:types     # los regenera en el formato que espera la versión nueva
+npm run verify
+```
+
+**Tercera causa del mismo síntoma: `select()` sin literal.**
+`supabase-js` deduce la forma de cada respuesta analizando el **texto** del
+select en tiempo de compilación. Necesita un literal:
+
+```ts
+.select('id, timezone')                    // ✅ el parser lo resuelve
+.select(columnas.map(c => c.n).join(','))  // ❌ es `string`: no puede
+```
+
+Con un `string` genérico el parser devuelve un tipo de error, y eso produce
+cascadas de `does not exist on type 'never'` en archivos que a simple vista
+están bien. Le pasó a `/admin/diagnostico`, que armaba su select con
+`.map().join()`: nueve errores en un archivo por una sola línea.
+
+Si un select tiene que variar, se declara una constante por cada forma con
+`as const` —como hace `listAppointments()` con y sin búsqueda—, nunca se
+construye la cadena. `npm run check:queries` detecta las violaciones.
+
 **Prevención.** Después de cada `npm run db:push`, corré `npm run db:types`.
 Los tipos son un contrato con la base: si se escriben a mano, mienten, y
 TypeScript no tiene forma de saberlo.
@@ -942,14 +998,14 @@ avise si el 4 tiene un error de tipeo.
 
 ```
 ☐ Proyecto de Supabase creado en la región correcta
+☐ npm run check:deps en verde (versiones exactas instaladas)
 ☐ Las 11 migraciones aplicadas sin errores
 ☐ verificacion.sql sin filas en ❌
 ☐ Site URL y Redirect URLs con el dominio de producción
 ☐ Variables de entorno cargadas en el hosting
 ☐ NEXT_PUBLIC_SITE_URL con el dominio real, sin barra final
 ☐ npm run check:env en verde
-☐ npm run check:types en verde
-☐ npm run build local sin errores
+☐ npm run verify en verde (incluye tipos, consultas y build)
 ☐ Primer administrador promovido
 ☐ Configuración, horarios y servicios cargados
 ☐ /admin/diagnostico en verde en producción
@@ -1020,6 +1076,29 @@ Seguridad
 
 ## 14. Changelog
 
+### 2026-07-31 · Versiones de Supabase y errores en cascada
+
+**Corregido**
+- 56 errores de tipos en 18 archivos, con una sola causa: `^2.45.4` permitió
+  que npm instalara `@supabase/supabase-js` 2.49+, cuyo sistema de tipos es
+  incompatible con el formato del archivo de tipos. Las dos dependencias de
+  Supabase quedaron fijadas en versiones exactas.
+- `listAppointments()` aplicaba `.returns<T>()` **antes** de los filtros.
+  Ese método devuelve un builder de transformación que ya no acepta `.eq()`,
+  `.gte()` ni `.or()`. Ahora va al final de la cadena.
+- El select de turnos usa siempre `client:clients!inner(...)`. No descarta
+  filas —`client_id` es NOT NULL con clave foránea— y elimina la segunda
+  variante del select, que obligaba a manejar una unión de tipos.
+- `MessageField` mezclaba dos identificadores distintos en una sola prop: el
+  nombre del campo del formulario (`messageConfirmation`, que lee Zod) y la
+  columna de la base (`message_confirmation`, que indexa el texto por
+  defecto). Ahora son dos props separadas.
+
+**Agregado**
+- `npm run check:deps`: confirma que las versiones instaladas de Supabase sean
+  las declaradas y avisa si alguna quedó con rango abierto. Corre primero en
+  `npm run verify`, porque explica el resto de los errores.
+
 ### 2026-07-31 · Tipos generados y build de producción
 
 **Corregido**
@@ -1036,6 +1115,14 @@ Seguridad
 **Agregado**
 - `src/types/domain.ts`: tipos propios derivados del esquema, separados del
   archivo generado para que regenerar no borre nada.
+- `npm run check:queries`: detecta `select()` armados dinámicamente, que
+  rompen la inferencia de supabase-js y generan errores `never` en cascada.
+- `npm run verify`: corre la misma secuencia que Vercel —tipos, consultas y
+  build— para no descubrir los errores recién en el deploy.
+- `/admin/diagnostico` reescrito sin selects dinámicos: era la causa de nueve
+  errores de tipos en ese archivo.
+- `generateMetadata` del layout raíz ya no puede tumbar el build: si la base
+  no responde durante la compilación, degrada a un título por defecto.
 - `npm run check:types`: detecta señales de edición manual en el archivo
   generado y explica por qué cada una rompe la inferencia.
 - `getDashboardStats()` verifica la forma del JSON en tiempo de ejecución, con

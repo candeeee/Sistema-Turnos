@@ -109,7 +109,7 @@ export const getBusinessSettings = cache(async (): Promise<BusinessSettings> => 
   // `data` viene tipado por el esquema, pero lo que la base devuelve en
   // tiempo de ejecución depende de las migraciones aplicadas. Se normaliza
   // como registro plano para poder comprobar qué claves faltan de verdad.
-  return normalizeSettings({ ...data } as Record<string, unknown>)
+  return normalizeSettings(data as Record<string, unknown>)
 })
 
 /** Link de WhatsApp listo para usar, o null si el negocio no cargó el número. */

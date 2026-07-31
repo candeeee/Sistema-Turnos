@@ -13,6 +13,38 @@ type Check = {
 }
 
 /**
+ * Columnas que agregaron las migraciones posteriores a la instalación inicial.
+ *
+ * El select de abajo las pide **por nombre y como literal**: si alguna no
+ * existe, PostgREST responde PGRST204 nombrándola, y el diagnóstico puede
+ * decir qué migración falta. Con `select('*')` la fila llegaría incompleta en
+ * silencio, que es exactamente el fallo que documenta la sección 11.5 del
+ * README.
+ *
+ * El literal y esta lista se mantienen juntos a propósito: si se agrega una
+ * columna hay que tocar los dos, y quedan a la vista uno al lado del otro.
+ */
+const COLUMNAS_RECIENTES = 'cancellation_policy, reminders_enabled, second_reminder_enabled, second_reminder_hours, message_confirmation, message_reminder, message_cancellation, message_status_change' as const
+
+const MIGRACION_POR_COLUMNA: Record<string, string> = {
+  cancellation_policy: '20260730120000_fixes.sql',
+  reminders_enabled: '20260730120000_fixes.sql',
+  second_reminder_enabled: '20260731110000_notifications.sql',
+  second_reminder_hours: '20260731110000_notifications.sql',
+  message_confirmation: '20260731110000_notifications.sql',
+  message_reminder: '20260731110000_notifications.sql',
+  message_cancellation: '20260731110000_notifications.sql',
+  message_status_change: '20260731110000_notifications.sql',
+}
+
+const PLANTILLAS = [
+  'message_confirmation',
+  'message_reminder',
+  'message_cancellation',
+  'message_status_change',
+] as const
+
+/**
  * Diagnóstico en caliente.
  *
  * Prueba cada dependencia usando exactamente la misma conexión, la misma
@@ -36,7 +68,12 @@ async function runChecks(): Promise<Check[]> {
       nombre,
       ok: false,
       code: shape.code,
-      detalle: [shape.message, shape.details, shape.hint, shape.code ? ERROR_CODES[shape.code] : null]
+      detalle: [
+        shape.message,
+        shape.details,
+        shape.hint,
+        shape.code ? ERROR_CODES[shape.code] : null,
+      ]
         .filter(Boolean)
         .join(' · '),
     })
@@ -53,7 +90,9 @@ async function runChecks(): Promise<Check[]> {
       : 'NEXT_PUBLIC_SUPABASE_ANON_KEY (nomenclatura anterior, sigue siendo válida)',
   })
 
-  const claveSecreta = Boolean(process.env.SUPABASE_SECRET_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY)
+  const claveSecreta = Boolean(
+    process.env.SUPABASE_SECRET_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY,
+  )
   checks.push({
     grupo: 'Entorno',
     nombre: 'Clave secreta',
@@ -73,52 +112,72 @@ async function runChecks(): Promise<Check[]> {
   })
 
   // --- Sesión y rol --------------------------------------------------------
-  const _userRes: any = await supabase.auth.getUser()
-  const userData = _userRes.data
-  const userError = _userRes.error
-  push('Sesión', 'Usuario autenticado', userError, userData?.user?.email ?? 'sin email')
+  const { data: userData, error: userError } = await supabase.auth.getUser()
+  push('Sesión', 'Usuario autenticado', userError, userData.user?.email ?? 'sin email')
 
-  const _isAdminRes: any = await supabase.rpc('is_admin')
-  const isAdmin = _isAdminRes.data
+  const { data: isAdmin, error: adminError } = await supabase.rpc('is_admin')
   if (adminError) {
     push('Sesión', 'is_admin()', adminError, '')
   } else {
     checks.push({
       grupo: 'Sesión',
       nombre: 'is_admin()',
-      ok: Boolean(isAdmin),
-      detalle: isAdmin
-        ? 'La base te reconoce como administrador'
-        : 'La función respondió false: tu usuario no tiene rol admin en public.profiles',
+      ok: isAdmin === true,
+      detalle:
+        isAdmin === true
+          ? 'La base te reconoce como administradora'
+          : 'La función respondió false: tu usuario no tiene rol admin en public.profiles',
     })
   }
 
   // --- Lectura de tablas ---------------------------------------------------
-  const tablas = [
-    'business_settings',
-    'services',
-    'business_hours',
-    'schedule_exceptions',
-    'appointments',
-    'clients',
-    'internal_notes',
-    'appointment_reminders',
-  ] as const
+  // Cada tabla se consulta por separado con su nombre literal: `from()` acepta
+  // solo los nombres del esquema, así que un error de tipeo no compila.
+  const { count: cSettings, error: eSettings } = await supabase
+    .from('business_settings')
+    .select('*', { count: 'exact', head: true })
+  push('Lectura', 'business_settings', eSettings, `${cSettings ?? 0} filas visibles`)
 
-  for (const tabla of tablas) {
-    const _res: any = await supabase.from(tabla).select('*', { count: 'exact', head: true })
-    const count = _res.count
-    const error = _res.error
-    push('Lectura', tabla, error, `${count ?? 0} filas visibles`)
-  }
+  const { count: cServices, error: eServices } = await supabase
+    .from('services')
+    .select('*', { count: 'exact', head: true })
+  push('Lectura', 'services', eServices, `${cServices ?? 0} filas visibles`)
+
+  const { count: cHours, error: eHours } = await supabase
+    .from('business_hours')
+    .select('*', { count: 'exact', head: true })
+  push('Lectura', 'business_hours', eHours, `${cHours ?? 0} filas visibles`)
+
+  const { count: cExceptions, error: eExceptions } = await supabase
+    .from('schedule_exceptions')
+    .select('*', { count: 'exact', head: true })
+  push('Lectura', 'schedule_exceptions', eExceptions, `${cExceptions ?? 0} filas visibles`)
+
+  const { count: cAppointments, error: eAppointments } = await supabase
+    .from('appointments')
+    .select('*', { count: 'exact', head: true })
+  push('Lectura', 'appointments', eAppointments, `${cAppointments ?? 0} filas visibles`)
+
+  const { count: cClients, error: eClients } = await supabase
+    .from('clients')
+    .select('*', { count: 'exact', head: true })
+  push('Lectura', 'clients', eClients, `${cClients ?? 0} filas visibles`)
+
+  const { count: cNotes, error: eNotes } = await supabase
+    .from('internal_notes')
+    .select('*', { count: 'exact', head: true })
+  push('Lectura', 'internal_notes', eNotes, `${cNotes ?? 0} filas visibles`)
+
+  const { count: cReminders, error: eReminders } = await supabase
+    .from('appointment_reminders')
+    .select('*', { count: 'exact', head: true })
+  push('Lectura', 'appointment_reminders', eReminders, `${cReminders ?? 0} filas visibles`)
 
   // --- La fila única de configuración --------------------------------------
-  const _settingsRes: any = await supabase
+  const { data: settings, error: settingsError } = await supabase
     .from('business_settings')
     .select('id, timezone')
     .maybeSingle()
-  const settings = _settingsRes.data
-  const settingsError = _settingsRes.error
 
   if (settingsError) {
     push('Configuración', 'Fila única', settingsError, '')
@@ -126,25 +185,25 @@ async function runChecks(): Promise<Check[]> {
     checks.push({
       grupo: 'Configuración',
       nombre: 'Fila única',
-      ok: Boolean(settings),
+      ok: settings !== null,
       detalle: settings
         ? `Existe · zona horaria ${settings.timezone}`
         : 'No existe. Ejecutá: insert into public.business_settings (id) values (true);',
     })
   }
 
+  const zonaHoraria = settings?.timezone ?? 'America/Argentina/Buenos_Aires'
+
   // --- Escritura: el camino exacto que usa /admin/configuracion ------------
   // Escribe el mismo valor que ya tiene, así que no cambia nada. Sirve para
   // saber si la policy de UPDATE deja pasar la operación: si devuelve cero
   // filas, el formulario respondería "guardado" sin guardar.
-  const _escritoRes: any = await supabase
+  const { data: escrito, error: escrituraError } = await supabase
     .from('business_settings')
-    .update({ timezone: settings?.timezone ?? 'America/Argentina/Buenos_Aires' })
+    .update({ timezone: zonaHoraria })
     .eq('id', true)
     .select('id')
     .maybeSingle()
-  const escrito = _escritoRes.data
-  const escrituraError = _escritoRes.error
 
   if (escrituraError) {
     push('Escritura', 'UPDATE business_settings', escrituraError, '')
@@ -152,124 +211,22 @@ async function runChecks(): Promise<Check[]> {
     checks.push({
       grupo: 'Escritura',
       nombre: 'UPDATE business_settings',
-      ok: Boolean(escrito),
+      ok: escrito !== null,
       detalle: escrito
         ? 'La policy permite guardar la configuración'
         : 'El UPDATE no afectó ninguna fila: la policy business_settings_update_admin te está bloqueando',
     })
   }
 
-  // --- RPC que usa el panel ------------------------------------------------
-  const _statsRes: any = await supabase.rpc('admin_dashboard_stats')
-  const statsError = _statsRes.error
-  push('RPC', 'admin_dashboard_stats()', statsError, 'Responde correctamente')
-
-  const _listRes: any = await supabase.rpc('admin_list_clients', {
-    p_search: '',
-    p_limit: 1,
-    p_offset: 0,
-  })
-  const listError = _listRes.error
-  push('RPC', 'admin_list_clients()', listError, 'Responde correctamente')
-
-  // Reproduce el camino exacto del cambio de estado: una función SECURITY
-  // INVOKER llamando a is_terminal_status(). Si falta el GRANT, falla acá y no
-  // sobre un turno real.
-  const _guardRes: any = await supabase.rpc('check_status_guard')
-  const guardError = _guardRes.error
-  push(
-    'RPC',
-    'Permiso del guard de estados',
-    guardError,
-    'El trigger de cambio de estado puede ejecutar is_terminal_status()',
-  )
-
-  const _driftRes: any = await supabase.rpc('admin_appointments_duration_drift')
-  const drift = _driftRes.data
-  const driftError = _driftRes.error
-  if (driftError) {
-    push('RPC', 'Duración de los turnos futuros', driftError, '')
-  } else {
-    checks.push({
-      grupo: 'RPC',
-      nombre: 'Duración de los turnos futuros',
-      ok: (drift?.length ?? 0) === 0,
-      detalle:
-        (drift?.length ?? 0) === 0
-          ? 'Todos los turnos futuros bloquean la duración actual de su servicio'
-          : `${drift?.length} turno(s) reservados con una duración distinta a la que hoy tiene su servicio. Bloquean la duración con la que se reservaron.`,
-    })
-  }
-
-  // --- RPC del sitio público -----------------------------------------------
-  const _servicioRes: any = await supabase
-    .from('services')
-    .select('id, name, duration_min')
-    .eq('is_active', true)
-    .limit(1)
-    .maybeSingle()
-  const servicio = _servicioRes.data
-
-  if (!servicio) {
-    checks.push({
-      grupo: 'Disponibilidad',
-      nombre: 'get_available_slots()',
-      ok: false,
-      detalle: 'No hay ningún servicio activo para probar. Cargá uno en /admin/servicios.',
-    })
-  } else {
-    const manana = new Date(Date.now() + 86_400_000).toISOString().slice(0, 10)
-    const _slotsRes: any = await supabase.rpc('get_available_slots', {
-      p_service_id: servicio.id,
-      p_date: manana,
-    })
-    const slots = _slotsRes.data
-    const slotsError = _slotsRes.error
-
-    if (slotsError) {
-      push('Disponibilidad', 'get_available_slots()', slotsError, '')
-    } else {
-      const horarios = (slots ?? [])
-        .slice(0, 12)
-        .map((slot: any) => slot.slot_start.slice(11, 16))
-        .join('  ')
-
-      checks.push({
-        grupo: 'Disponibilidad',
-        nombre: 'get_available_slots()',
-        ok: true,
-        detalle: `${slots?.length ?? 0} horarios mañana para "${servicio.name}" (${servicio.duration_min} min)${
-          (slots?.length ?? 0) === 0
-            ? ' · revisá las franjas en /admin/horarios'
-            : ` · en UTC: ${horarios}${(slots?.length ?? 0) > 12 ? '…' : ''}`
-        }`,
-      })
-    }
-  }
-
   // --- Esquema al día ------------------------------------------------------
-  // Se piden las columnas por nombre en lugar de `select('*')`: así, si una
-  // migración no se aplicó, PostgREST responde PGRST204 con el nombre exacto
-  // de la columna que falta en vez de devolver la fila incompleta en silencio.
-  const columnasEsperadas = [
-    { columna: 'cancellation_policy', migracion: '20260730120000_fixes.sql' },
-    { columna: 'reminders_enabled', migracion: '20260730120000_fixes.sql' },
-    { columna: 'second_reminder_enabled', migracion: '20260731110000_notifications.sql' },
-    { columna: 'second_reminder_hours', migracion: '20260731110000_notifications.sql' },
-    { columna: 'message_confirmation', migracion: '20260731110000_notifications.sql' },
-    { columna: 'message_reminder', migracion: '20260731110000_notifications.sql' },
-    { columna: 'message_cancellation', migracion: '20260731110000_notifications.sql' },
-    { columna: 'message_status_change', migracion: '20260731110000_notifications.sql' },
-  ]
-
   const { data: columnas, error: columnasError } = await supabase
     .from('business_settings')
-    .select(columnasEsperadas.map((item) => item.columna).join(','))
+    .select(COLUMNAS_RECIENTES)
     .maybeSingle()
 
   if (columnasError) {
-    const faltante = columnasEsperadas.find((item) =>
-      columnasError.message.includes(item.columna),
+    const faltante = Object.keys(MIGRACION_POR_COLUMNA).find((columna) =>
+      columnasError.message.includes(columna),
     )
 
     checks.push({
@@ -278,17 +235,18 @@ async function runChecks(): Promise<Check[]> {
       ok: false,
       code: columnasError.code,
       detalle: faltante
-        ? `Falta la columna "${faltante.columna}". Aplicá la migración ${faltante.migracion}.`
-        : `${columnasError.message}. Aplicá las migraciones pendientes con: npx supabase db push`,
+        ? `Falta la columna "${faltante}". Aplicá la migración ${MIGRACION_POR_COLUMNA[faltante]}.`
+        : `${columnasError.message}. Aplicá las migraciones pendientes: npx supabase db push`,
+    })
+  } else if (columnas === null) {
+    checks.push({
+      grupo: 'Esquema',
+      nombre: 'Columnas de notificaciones',
+      ok: false,
+      detalle: 'No se pudo leer la fila de configuración.',
     })
   } else {
-    const fila: Record<string, unknown> = columnas ?? {}
-    const vacias = ([
-      'message_confirmation',
-      'message_reminder',
-      'message_cancellation',
-      'message_status_change',
-    ] as const).filter((clave) => String(fila[clave] ?? '').trim() === '')
+    const vacias = PLANTILLAS.filter((clave) => columnas[clave].trim() === '')
 
     checks.push({
       grupo: 'Esquema',
@@ -299,6 +257,97 @@ async function runChecks(): Promise<Check[]> {
           ? 'Las 8 columnas existen y las 4 plantillas tienen texto'
           : `${vacias.length} plantilla(s) vacías en la base: ${vacias.join(', ')}. La aplicación usa los textos por defecto; guardá una vez en /admin/notificaciones para fijarlos.`,
     })
+  }
+
+  // --- RPC que usa el panel ------------------------------------------------
+  const { error: statsError } = await supabase.rpc('admin_dashboard_stats')
+  push('RPC', 'admin_dashboard_stats()', statsError, 'Responde correctamente')
+
+  const { error: listError } = await supabase.rpc('admin_list_clients', {
+    p_search: '',
+    p_limit: 1,
+    p_offset: 0,
+  })
+  push('RPC', 'admin_list_clients()', listError, 'Responde correctamente')
+
+  // Reproduce el camino exacto del cambio de estado: una función SECURITY
+  // INVOKER llamando a is_terminal_status(). Si falta el GRANT, falla acá y no
+  // sobre un turno real.
+  const { error: guardError } = await supabase.rpc('check_status_guard')
+  push(
+    'RPC',
+    'Permiso del guard de estados',
+    guardError,
+    'El trigger de cambio de estado puede ejecutar is_terminal_status()',
+  )
+
+  const { data: drift, error: driftError } = await supabase.rpc(
+    'admin_appointments_duration_drift',
+  )
+
+  if (driftError) {
+    push('RPC', 'Duración de los turnos futuros', driftError, '')
+  } else {
+    const desalineados = drift ?? []
+
+    checks.push({
+      grupo: 'RPC',
+      nombre: 'Duración de los turnos futuros',
+      ok: desalineados.length === 0,
+      detalle:
+        desalineados.length === 0
+          ? 'Todos los turnos futuros bloquean la duración actual de su servicio'
+          : `${desalineados.length} turno(s) reservados con una duración distinta a la que hoy tiene su servicio. Bloquean la duración con la que se reservaron.`,
+    })
+  }
+
+  // --- Disponibilidad ------------------------------------------------------
+  const { data: servicio } = await supabase
+    .from('services')
+    .select('id, name, duration_min')
+    .eq('is_active', true)
+    .limit(1)
+    .maybeSingle()
+
+  if (servicio === null) {
+    checks.push({
+      grupo: 'Disponibilidad',
+      nombre: 'get_available_slots()',
+      ok: false,
+      detalle: 'No hay ningún servicio activo para probar. Cargá uno en /admin/servicios.',
+    })
+  } else {
+    const manana = new Date(Date.now() + 86_400_000).toISOString().slice(0, 10)
+
+    const { data: slots, error: slotsError } = await supabase.rpc('get_available_slots', {
+      p_service_id: servicio.id,
+      p_date: manana,
+    })
+
+    if (slotsError) {
+      push('Disponibilidad', 'get_available_slots()', slotsError, '')
+    } else {
+      const libres = slots ?? []
+
+      // Los horarios se muestran en UTC a propósito: es el valor crudo que
+      // devuelve la base, sin la conversión que aplica el resto de la app. Si
+      // acá se ven bien y en el sitio no, el problema es la zona horaria.
+      const horarios = libres
+        .slice(0, 12)
+        .map((slot) => slot.slot_start.slice(11, 16))
+        .join('  ')
+
+      checks.push({
+        grupo: 'Disponibilidad',
+        nombre: 'get_available_slots()',
+        ok: true,
+        detalle: `${libres.length} horarios mañana para "${servicio.name}" (${servicio.duration_min} min)${
+          libres.length === 0
+            ? ' · revisá las franjas en /admin/horarios'
+            : ` · en UTC: ${horarios}${libres.length > 12 ? '…' : ''}`
+        }`,
+      })
+    }
   }
 
   // --- Storage -------------------------------------------------------------
@@ -313,15 +362,18 @@ export default async function DiagnosticsPage() {
   const fallos = checks.filter((check) => !check.ok)
 
   const grupos = checks.reduce<Record<string, Check[]>>((acc, check) => {
-    ;(acc[check.grupo] ??= []).push(check)
+    const lista = acc[check.grupo]
+    if (lista) lista.push(check)
+    else acc[check.grupo] = [check]
     return acc
   }, {})
 
   return (
     <div className="flex flex-col gap-8">
       <header>
-        <h1 className="font-display text-3xl sm:text-4xl">Diagnóstico</h1>
-        <p className="mt-2 text-sm text-muted">
+        <p className="text-[11px] uppercase tracking-[0.18em] text-muted">Instalación</p>
+        <h1 className="mt-3 font-display text-4xl font-light sm:text-5xl">Diagnóstico</h1>
+        <p className="mt-3 max-w-xl text-sm leading-relaxed text-muted">
           Cada prueba usa la misma conexión y los mismos permisos que el resto del panel. Un script
           en el SQL Editor corre como <span className="tnum">postgres</span> y puede dar verde
           mientras la aplicación falla; esto no.
@@ -337,26 +389,28 @@ export default async function DiagnosticsPage() {
       >
         {fallos.length === 0
           ? 'Todas las pruebas pasaron. El sistema está correctamente instalado.'
-          : `${fallos.length} ${fallos.length === 1 ? 'prueba falló' : 'pruebas fallaron'}. El detalle de cada una está abajo, con el código de error.`}
+          : `${fallos.length} ${fallos.length === 1 ? 'prueba falló' : 'pruebas fallaron'}. El detalle de cada una está abajo, con su código de error.`}
       </p>
 
       {Object.entries(grupos).map(([grupo, items]) => (
         <section key={grupo}>
-          <h2 className="mb-3 text-xs uppercase tracking-[0.15em] text-muted">{grupo}</h2>
+          <h2 className="mb-3 text-[11px] uppercase tracking-[0.18em] text-muted">{grupo}</h2>
 
           <ul className="flex flex-col gap-2">
             {items.map((check) => (
               <li
                 key={`${grupo}-${check.nombre}`}
-                className="flex flex-wrap items-start gap-x-4 gap-y-1 rounded-[var(--radius-card)] border border-line bg-surface px-5 py-3.5"
+                className="flex flex-wrap items-start gap-x-4 gap-y-1 rounded-[var(--radius-card)] border border-line bg-surface px-5 py-4 shadow-soft"
               >
                 <span aria-hidden className="text-sm">
                   {check.ok ? '✅' : '❌'}
                 </span>
                 <span className="tnum min-w-52 text-sm">{check.nombre}</span>
-                <span className="min-w-0 flex-1 text-sm text-muted">{check.detalle}</span>
+                <span className="min-w-0 flex-1 text-sm leading-relaxed text-muted">
+                  {check.detalle}
+                </span>
                 {check.code && (
-                  <span className="tnum rounded-full bg-paper px-2.5 py-1 text-xs">{check.code}</span>
+                  <span className="tnum rounded-full bg-veil px-2.5 py-1 text-xs">{check.code}</span>
                 )}
               </li>
             ))}

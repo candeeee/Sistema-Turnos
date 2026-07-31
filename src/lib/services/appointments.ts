@@ -21,6 +21,7 @@ export async function getMyUpcomingAppointments(): Promise<AppointmentWithServic
     .in('status', ACTIVE_STATUSES)
     .gte('starts_at', new Date().toISOString())
     .order('starts_at')
+    .returns<AppointmentWithService[]>()
 
   if (error) {
     throw new DataError('getMyUpcomingAppointments', error)
@@ -46,6 +47,7 @@ export async function getMyPastAppointments(limit = 50): Promise<AppointmentWith
     .or(`status.in.(${closed.join(',')}),starts_at.lt.${new Date().toISOString()}`)
     .order('starts_at', { ascending: false })
     .limit(limit)
+    .returns<AppointmentWithService[]>()
 
   if (error) {
     throw new DataError('getMyPastAppointments', error)
@@ -60,6 +62,7 @@ export async function getMyAppointment(id: string): Promise<AppointmentWithServi
     .from('appointments')
     .select(SELECT_WITH_SERVICE)
     .eq('id', id)
+    .returns<AppointmentWithService[]>()
     .maybeSingle()
 
   if (error) {
