@@ -1,4 +1,4 @@
-import type { AppointmentStatus, ScheduleExceptionType } from '@/types/database.types'
+import type { AppointmentStatus, ScheduleExceptionType } from '@/types/domain'
 
 /**
  * Etiquetas y color de cada estado. Un solo lugar: el calendario, la tabla de

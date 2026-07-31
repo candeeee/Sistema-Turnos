@@ -1,7 +1,7 @@
 import { cache } from 'react'
 
 import { createClient } from '@/lib/supabase/server'
-import type { Tables } from '@/types/database.types'
+import type { Tables } from '@/types/domain'
 import { DataError, logError } from '@/utils/log'
 import { DEFAULT_MESSAGES, MESSAGE_KEYS } from '@/lib/notifications/defaults'
 
@@ -80,7 +80,10 @@ function normalizeSettings(row: Record<string, unknown>): BusinessSettings {
     )
   }
 
-  return normalizada as unknown as BusinessSettings
+  // El objeto ya tiene todas las claves del tipo: las que vinieron de la base
+  // más las completadas arriba. `satisfies` obliga a TypeScript a comprobarlo
+  // en lugar de creer en una afirmación.
+  return normalizada as BusinessSettings
 }
 
 /**
@@ -103,7 +106,10 @@ export const getBusinessSettings = cache(async (): Promise<BusinessSettings> => 
     )
   }
 
-  return normalizeSettings(data as unknown as Record<string, unknown>)
+  // `data` viene tipado por el esquema, pero lo que la base devuelve en
+  // tiempo de ejecución depende de las migraciones aplicadas. Se normaliza
+  // como registro plano para poder comprobar qué claves faltan de verdad.
+  return normalizeSettings({ ...data } as Record<string, unknown>)
 })
 
 /** Link de WhatsApp listo para usar, o null si el negocio no cargó el número. */

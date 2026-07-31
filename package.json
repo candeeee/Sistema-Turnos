@@ -9,9 +9,10 @@
     "lint": "next lint",
     "typecheck": "tsc --noEmit",
     "check:env": "node scripts/check-env.mjs",
+    "check:types": "node scripts/check-types-sync.mjs",
     "db:push": "supabase db push",
     "db:reset": "supabase db reset",
-    "db:types": "supabase gen types typescript --linked --schema public > src/types/database.types.ts"
+    "db:types": "supabase gen types typescript --linked --schema public > src/types/database.types.ts && echo '\\n\u26a0\ufe0f  Regenerado. Revis\u00e1 src/types/domain.ts si cambi\u00f3 el esquema.'"
   },
   "dependencies": {
     "@supabase/ssr": "^0.6.1",

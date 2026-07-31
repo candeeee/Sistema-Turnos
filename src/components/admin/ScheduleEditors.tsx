@@ -10,7 +10,7 @@ import {
 } from '@/lib/actions/admin/schedule'
 import { IDLE_STATE } from '@/lib/actions/types'
 import { SCHEDULE_EXCEPTION_LABEL, WEEKDAYS } from '@/lib/constants'
-import type { Tables } from '@/types/database.types'
+import type { Tables } from '@/types/domain'
 import { formatDateTime } from '@/utils/format'
 
 import { SubmitButton } from '@/components/ui/Button'

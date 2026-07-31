@@ -8,7 +8,7 @@ import {
   toggleServiceAction,
 } from '@/lib/actions/admin/services'
 import { IDLE_STATE } from '@/lib/actions/types'
-import type { Tables } from '@/types/database.types'
+import type { Tables } from '@/types/domain'
 import { formatDuration, formatPrice } from '@/utils/format'
 
 import { Button, SubmitButton } from '@/components/ui/Button'

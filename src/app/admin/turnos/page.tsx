@@ -4,7 +4,7 @@ import { getBusinessSettings } from '@/lib/services/settings'
 import { APPOINTMENT_STATUS, APPOINTMENT_STATUSES } from '@/lib/constants'
 import { AppointmentsTable } from '@/components/admin/AppointmentsTable'
 import { toMessaging } from '@/lib/services/admin/messaging'
-import type { AppointmentStatus } from '@/types/database.types'
+import type { AppointmentStatus } from '@/types/domain'
 
 export const dynamic = 'force-dynamic'
 

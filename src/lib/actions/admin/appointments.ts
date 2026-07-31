@@ -6,7 +6,7 @@ import { createClient } from '@/lib/supabase/server'
 import { statusSchema } from '@/lib/validations/admin'
 import type { ActionResult } from '@/lib/actions/types'
 import { toUserMessage } from '@/utils/errors'
-import type { AppointmentStatus } from '@/types/database.types'
+import type { AppointmentStatus } from '@/types/domain'
 
 const ADMIN_PATHS = ['/admin', '/admin/turnos', '/admin/calendario', '/admin/clientes']
 

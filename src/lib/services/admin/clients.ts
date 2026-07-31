@@ -1,5 +1,5 @@
 import { createClient } from '@/lib/supabase/server'
-import type { ClientSummary, Tables } from '@/types/database.types'
+import type { ClientSummary, Tables } from '@/types/domain'
 import { DataError } from '@/utils/log'
 
 export type InternalNote = Tables<'internal_notes'>

@@ -115,6 +115,7 @@ npm run dev
 | `npm run lint` | ESLint |
 | `npm run typecheck` | Verifica tipos sin compilar |
 | `npm run check:env` | Valida `.env.local` y prueba la conexión real con Supabase |
+| `npm run check:types` | Verifica que `database.types.ts` siga siendo un archivo generado |
 | `npm run db:push` | Aplica las migraciones pendientes |
 | `npm run db:reset` | Recrea la base local desde cero |
 | `npm run db:types` | Regenera `src/types/database.types.ts` desde el esquema real |
@@ -317,7 +318,8 @@ src/
     env.ts      Variables de entorno tipadas
 
   types/
-    database.types.ts   Espejo del esquema de la base
+    database.types.ts   GENERADO por supabase gen types. No editar a mano
+    domain.ts           Tipos propios, derivados del anterior
 
   utils/       Funciones puras: fechas, formateo, errores, logging, imágenes
   middleware.ts  Refresco de sesión y protección de rutas
@@ -437,6 +439,12 @@ mezclarse, y el middleware la respalda: un administrador que escriba
 ---
 
 ## 8. Decisiones técnicas
+
+**¿Por qué los tipos generados y los propios viven separados?**
+Porque `npm run db:types` sobrescribe el archivo entero. Con todo mezclado,
+regenerar borra el código escrito a mano, así que en la práctica nadie
+regenera y los tipos dejan de describir la base. `database.types.ts` es
+generado y `domain.ts` deriva de él: regenerar es seguro, y por eso se hace.
 
 **¿Por qué el diseño se define solo con tokens?**
 Todo el color, la tipografía, los radios y las curvas de animación viven en el
@@ -664,6 +672,74 @@ No se desactivó RLS ni se tocó ninguna policy.
 ejecuta. Si el `GRANT` vuelve a faltar, se detecta ahí y no sobre un turno
 real.
 
+### 11.6 `Property 'X' does not exist on type 'never'` en el build
+
+**Síntoma:** el build de Vercel falla con `Property 'timezone' does not exist
+on type 'never'`. En desarrollo no aparece, porque `next dev` no hace
+verificación completa de tipos.
+
+**Causa raíz.** `database.types.ts` estaba escrito a mano y contenía
+construcciones que el generador nunca emite:
+
+| Escrito a mano | Lo que emite el generador |
+|---|---|
+| `Insert: never` | un objeto con las columnas |
+| `Views: Record<never, never>` | `{ [_ in never]: never }` |
+| `Args: Record<string, never>` | `Args: Record<PropertyKey, never>` |
+
+`supabase-js` resuelve el tipo de cada consulta con tipos condicionales sobre
+`Database`. Si una tabla declara `Insert: never`, ese tipo **no es asignable**
+a la forma que el cliente espera, la condición no encaja y toda la rama
+colapsa a `never`. Por eso el error aparecía en `settings.timezone` aunque el
+problema estuviera en la definición de la tabla: `maybeSingle()` devolvía
+`never` y cualquier propiedad sobre `never` es un error.
+
+Que fallara solo en Vercel es coherente: `next build` corre `tsc` sobre todo
+el proyecto, `next dev` no.
+
+**Por qué el archivo se editaba a mano.** Porque mezclaba dos cosas: los tipos
+generados y los tipos propios del dominio (`AppointmentStatus`,
+`DashboardStats`, `Tables<>`). Con todo en un archivo, `npm run db:types` los
+borraba. La consecuencia práctica fue que nadie regeneraba nunca, y los tipos
+dejaron de describir la base. Ese mismo desfasaje causó el error de plantillas
+de la sección 11.5.
+
+**Solución aplicada.**
+
+1. **`database.types.ts`** se reescribió en el formato exacto del generador y
+   quedó marcado como archivo generado. Solo exporta `Database` y `Json`.
+2. **`src/types/domain.ts`** es nuevo y contiene todo lo escrito a mano,
+   **derivado** del generado:
+
+   ```ts
+   export type AppointmentStatus = Enums<'appointment_status'>
+   export type ClientSummary =
+     Database['public']['Functions']['admin_list_clients']['Returns'][number]
+   ```
+
+   Regenerar ya no borra nada y los tipos del dominio se actualizan solos con
+   el esquema.
+3. **Las 17 importaciones** de tipos del dominio pasaron a `@/types/domain`.
+   Los cuatro clientes de Supabase siguen importando `Database` del archivo
+   generado: es su contrato directo con la base.
+4. **Se eliminaron los `as unknown as`** de los listados de turnos. Con los
+   tipos correctos, `supabase-js` infiere los joins solo; lo único que faltaba
+   era declarar los `select` como literales constantes (`as const`), porque
+   una cadena armada dinámicamente se tipa como `string` y rompe la
+   inferencia.
+5. **`npm run check:types`** detecta las construcciones que delatan edición
+   manual y explica por qué cada una rompe la inferencia.
+
+**Sobre `admin_dashboard_stats`.** Devuelve `json`, y PostgreSQL no puede
+describir la forma de ese objeto: para el generador es `Json`. Su estructura
+se verifica ahora en tiempo de ejecución en `getDashboardStats()`, con un
+mensaje que nombra la clave faltante, en lugar de afirmarla con un `as` que
+TypeScript aceptaría sin comprobar nada.
+
+**Prevención.** Después de cada `npm run db:push`, corré `npm run db:types`.
+Los tipos son un contrato con la base: si se escriben a mano, mienten, y
+TypeScript no tiene forma de saberlo.
+
 ### 11.5 `Cannot read properties of undefined (reading 'replace')`
 
 **Síntoma:** las pantallas de Turnos y Notificaciones rompen en
@@ -872,6 +948,7 @@ avise si el 4 tiene un error de tipeo.
 ☐ Variables de entorno cargadas en el hosting
 ☐ NEXT_PUBLIC_SITE_URL con el dominio real, sin barra final
 ☐ npm run check:env en verde
+☐ npm run check:types en verde
 ☐ npm run build local sin errores
 ☐ Primer administrador promovido
 ☐ Configuración, horarios y servicios cargados
@@ -942,6 +1019,27 @@ Seguridad
 ---
 
 ## 14. Changelog
+
+### 2026-07-31 · Tipos generados y build de producción
+
+**Corregido**
+- `Property 'timezone' does not exist on type 'never'` en el build. Causa raíz
+  y solución completas en la sección 11.6.
+- `database.types.ts` se reescribió en el formato del generador: las
+  construcciones escritas a mano (`Insert: never`, `Views: Record<never,
+  never>`, `Args: Record<string, never>`) rompían la inferencia de
+  `supabase-js` y colapsaban todas las consultas a `never`.
+- Se eliminaron los cuatro `as unknown as` de los listados de turnos: con los
+  tipos correctos y los `select` como literales constantes, la inferencia de
+  los joins funciona sola.
+
+**Agregado**
+- `src/types/domain.ts`: tipos propios derivados del esquema, separados del
+  archivo generado para que regenerar no borre nada.
+- `npm run check:types`: detecta señales de edición manual en el archivo
+  generado y explica por qué cada una rompe la inferencia.
+- `getDashboardStats()` verifica la forma del JSON en tiempo de ejecución, con
+  el nombre de la clave faltante.
 
 ### 2026-07-31 · Plantillas ausentes en la configuración
 

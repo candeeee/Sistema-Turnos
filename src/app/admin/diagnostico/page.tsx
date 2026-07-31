@@ -73,10 +73,13 @@ async function runChecks(): Promise<Check[]> {
   })
 
   // --- Sesión y rol --------------------------------------------------------
-  const { data: userData, error: userError } = await supabase.auth.getUser()
-  push('Sesión', 'Usuario autenticado', userError, userData.user?.email ?? 'sin email')
+  const _userRes: any = await supabase.auth.getUser()
+  const userData = _userRes.data
+  const userError = _userRes.error
+  push('Sesión', 'Usuario autenticado', userError, userData?.user?.email ?? 'sin email')
 
-  const { data: isAdmin, error: adminError } = await supabase.rpc('is_admin')
+  const _isAdminRes: any = await supabase.rpc('is_admin')
+  const isAdmin = _isAdminRes.data
   if (adminError) {
     push('Sesión', 'is_admin()', adminError, '')
   } else {
@@ -103,15 +106,19 @@ async function runChecks(): Promise<Check[]> {
   ] as const
 
   for (const tabla of tablas) {
-    const { count, error } = await supabase.from(tabla).select('*', { count: 'exact', head: true })
+    const _res: any = await supabase.from(tabla).select('*', { count: 'exact', head: true })
+    const count = _res.count
+    const error = _res.error
     push('Lectura', tabla, error, `${count ?? 0} filas visibles`)
   }
 
   // --- La fila única de configuración --------------------------------------
-  const { data: settings, error: settingsError } = await supabase
+  const _settingsRes: any = await supabase
     .from('business_settings')
     .select('id, timezone')
     .maybeSingle()
+  const settings = _settingsRes.data
+  const settingsError = _settingsRes.error
 
   if (settingsError) {
     push('Configuración', 'Fila única', settingsError, '')
@@ -130,12 +137,14 @@ async function runChecks(): Promise<Check[]> {
   // Escribe el mismo valor que ya tiene, así que no cambia nada. Sirve para
   // saber si la policy de UPDATE deja pasar la operación: si devuelve cero
   // filas, el formulario respondería "guardado" sin guardar.
-  const { data: escrito, error: escrituraError } = await supabase
+  const _escritoRes: any = await supabase
     .from('business_settings')
     .update({ timezone: settings?.timezone ?? 'America/Argentina/Buenos_Aires' })
     .eq('id', true)
     .select('id')
     .maybeSingle()
+  const escrito = _escritoRes.data
+  const escrituraError = _escritoRes.error
 
   if (escrituraError) {
     push('Escritura', 'UPDATE business_settings', escrituraError, '')
@@ -151,20 +160,23 @@ async function runChecks(): Promise<Check[]> {
   }
 
   // --- RPC que usa el panel ------------------------------------------------
-  const { error: statsError } = await supabase.rpc('admin_dashboard_stats')
+  const _statsRes: any = await supabase.rpc('admin_dashboard_stats')
+  const statsError = _statsRes.error
   push('RPC', 'admin_dashboard_stats()', statsError, 'Responde correctamente')
 
-  const { error: listError } = await supabase.rpc('admin_list_clients', {
+  const _listRes: any = await supabase.rpc('admin_list_clients', {
     p_search: '',
     p_limit: 1,
     p_offset: 0,
   })
+  const listError = _listRes.error
   push('RPC', 'admin_list_clients()', listError, 'Responde correctamente')
 
   // Reproduce el camino exacto del cambio de estado: una función SECURITY
   // INVOKER llamando a is_terminal_status(). Si falta el GRANT, falla acá y no
   // sobre un turno real.
-  const { error: guardError } = await supabase.rpc('check_status_guard')
+  const _guardRes: any = await supabase.rpc('check_status_guard')
+  const guardError = _guardRes.error
   push(
     'RPC',
     'Permiso del guard de estados',
@@ -172,9 +184,9 @@ async function runChecks(): Promise<Check[]> {
     'El trigger de cambio de estado puede ejecutar is_terminal_status()',
   )
 
-  const { data: drift, error: driftError } = await supabase.rpc(
-    'admin_appointments_duration_drift',
-  )
+  const _driftRes: any = await supabase.rpc('admin_appointments_duration_drift')
+  const drift = _driftRes.data
+  const driftError = _driftRes.error
   if (driftError) {
     push('RPC', 'Duración de los turnos futuros', driftError, '')
   } else {
@@ -190,12 +202,13 @@ async function runChecks(): Promise<Check[]> {
   }
 
   // --- RPC del sitio público -----------------------------------------------
-  const { data: servicio } = await supabase
+  const _servicioRes: any = await supabase
     .from('services')
     .select('id, name, duration_min')
     .eq('is_active', true)
     .limit(1)
     .maybeSingle()
+  const servicio = _servicioRes.data
 
   if (!servicio) {
     checks.push({
@@ -206,17 +219,19 @@ async function runChecks(): Promise<Check[]> {
     })
   } else {
     const manana = new Date(Date.now() + 86_400_000).toISOString().slice(0, 10)
-    const { data: slots, error: slotsError } = await supabase.rpc('get_available_slots', {
+    const _slotsRes: any = await supabase.rpc('get_available_slots', {
       p_service_id: servicio.id,
       p_date: manana,
     })
+    const slots = _slotsRes.data
+    const slotsError = _slotsRes.error
 
     if (slotsError) {
       push('Disponibilidad', 'get_available_slots()', slotsError, '')
     } else {
       const horarios = (slots ?? [])
         .slice(0, 12)
-        .map((slot) => slot.slot_start.slice(11, 16))
+        .map((slot: any) => slot.slot_start.slice(11, 16))
         .join('  ')
 
       checks.push({
@@ -267,7 +282,7 @@ async function runChecks(): Promise<Check[]> {
         : `${columnasError.message}. Aplicá las migraciones pendientes con: npx supabase db push`,
     })
   } else {
-    const fila = (columnas ?? {}) as Record<string, unknown>
+    const fila: Record<string, unknown> = columnas ?? {}
     const vacias = ([
       'message_confirmation',
       'message_reminder',

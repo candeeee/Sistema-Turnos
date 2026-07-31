@@ -1,5 +1,5 @@
 import { APPOINTMENT_STATUS } from '@/lib/constants'
-import type { AppointmentStatus } from '@/types/database.types'
+import type { AppointmentStatus } from '@/types/domain'
 
 export function StatusBadge({
   status,

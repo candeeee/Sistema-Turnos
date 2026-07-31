@@ -1,5 +1,5 @@
 import { createClient } from '@/lib/supabase/server'
-import type { Tables } from '@/types/database.types'
+import type { Tables } from '@/types/domain'
 import { DataError } from '@/utils/log'
 
 /** Todos los servicios, incluidos los desactivados: es la vista del panel. */

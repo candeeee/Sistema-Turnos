@@ -1,5 +1,5 @@
 import { createClient } from '@/lib/supabase/server'
-import type { AppointmentStatus, Tables } from '@/types/database.types'
+import type { AppointmentStatus, Tables } from '@/types/domain'
 import { ACTIVE_STATUSES } from '@/lib/constants'
 import { DataError } from '@/utils/log'
 
@@ -7,8 +7,7 @@ export type AppointmentWithService = Tables<'appointments'> & {
   service: Pick<Tables<'services'>, 'id' | 'name' | 'slug' | 'image_path'> | null
 }
 
-const SELECT_WITH_SERVICE =
-  '*, service:services (id, name, slug, image_path)'
+const SELECT_WITH_SERVICE = '*, service:services(id, name, slug, image_path)' as const
 
 /**
  * Turnos del usuario de la sesión. RLS limita el resultado a los propios, así
@@ -27,7 +26,7 @@ export async function getMyUpcomingAppointments(): Promise<AppointmentWithServic
     throw new DataError('getMyUpcomingAppointments', error)
   }
 
-  return data as AppointmentWithService[]
+  return data
 }
 
 /** Todo lo que ya pasó o quedó cerrado, del más reciente al más viejo. */
@@ -52,7 +51,7 @@ export async function getMyPastAppointments(limit = 50): Promise<AppointmentWith
     throw new DataError('getMyPastAppointments', error)
   }
 
-  return data as AppointmentWithService[]
+  return data
 }
 
 export async function getMyAppointment(id: string): Promise<AppointmentWithService | null> {
@@ -67,5 +66,5 @@ export async function getMyAppointment(id: string): Promise<AppointmentWithServi
     throw new DataError('getMyAppointment', error, { id })
   }
 
-  return data as AppointmentWithService | null
+  return data
 }

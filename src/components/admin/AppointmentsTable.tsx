@@ -11,7 +11,7 @@ import { APPOINTMENT_STATUS, APPOINTMENT_STATUSES } from '@/lib/constants'
 import { formatDateLong, formatDateTime, formatDuration, formatPrice, formatTime } from '@/utils/format'
 import { zoneOffset } from '@/utils/date'
 import { renderTemplate, whatsappMessageLink } from '@/utils/templates'
-import type { AppointmentStatus } from '@/types/database.types'
+import type { AppointmentStatus } from '@/types/domain'
 
 /** Textos configurados en /admin/notificaciones. */
 export type Messaging = {

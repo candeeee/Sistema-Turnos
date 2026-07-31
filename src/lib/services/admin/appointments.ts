@@ -1,14 +1,28 @@
 import { createClient } from '@/lib/supabase/server'
-import type { AppointmentStatus, Tables } from '@/types/database.types'
+import type { AppointmentStatus, Tables } from '@/types/domain'
 import { DataError } from '@/utils/log'
 
+/**
+ * Turno con su servicio y su cliente. Se deriva de las tablas en vez de
+ * repetir los campos: si mañana una columna cambia de tipo, este alias cambia
+ * con ella y el error aparece en el compilador, no en la pantalla.
+ */
 export type AdminAppointment = Tables<'appointments'> & {
   service: Pick<Tables<'services'>, 'id' | 'name' | 'duration_min'> | null
   client: Pick<Tables<'clients'>, 'id' | 'full_name' | 'phone' | 'email'> | null
 }
 
-const SELECT =
-  '*, service:services (id, name, duration_min), client:clients (id, full_name, phone, email)'
+/**
+ * Las dos formas del select se declaran como literales constantes (`as const`)
+ * para que supabase-js pueda inferir la forma de la respuesta a partir del
+ * esquema. Una cadena armada dinámicamente se tipa como `string` y la
+ * inferencia se cae, que es lo que antes obligaba a castear el resultado.
+ */
+const SELECT = '*, service:services(id, name, duration_min), client:clients(id, full_name, phone, email)' as const
+
+/** Con `!inner`, PostgREST permite filtrar por columnas del cliente. */
+const SELECT_CON_BUSQUEDA =
+  '*, service:services(id, name, duration_min), client:clients!inner(id, full_name, phone, email)' as const
 
 export type AppointmentFilters = {
   status?: AppointmentStatus | 'all'
@@ -29,10 +43,10 @@ export async function listAppointments(
   const supabase = await createClient()
   const search = filters.search?.trim()
 
-  let query = supabase
-    .from('appointments')
-    // El inner join es necesario para poder filtrar por datos del cliente.
-    .select(search ? '*, service:services (id, name, duration_min), client:clients!inner (id, full_name, phone, email)' : SELECT)
+  let query = (search
+    ? supabase.from('appointments').select(SELECT_CON_BUSQUEDA)
+    : supabase.from('appointments').select(SELECT)
+  )
     .order('starts_at', { ascending: false })
     .limit(limit)
 
@@ -65,7 +79,7 @@ export async function listAppointments(
     throw new DataError('listAppointments', error, { filters })
   }
 
-  return data as unknown as AdminAppointment[]
+  return data
 }
 
 /** Turnos de un rango, para el calendario. */
@@ -85,7 +99,7 @@ export async function getAppointmentsInRange(
     throw new DataError('getAppointmentsInRange', error, { fromIso, toIso })
   }
 
-  return data as unknown as AdminAppointment[]
+  return data
 }
 
 /** Turnos de un cliente, para su ficha. */
@@ -101,5 +115,5 @@ export async function getClientAppointments(clientId: string): Promise<AdminAppo
     throw new DataError('getClientAppointments', error, { clientId })
   }
 
-  return data as unknown as AdminAppointment[]
+  return data
 }
