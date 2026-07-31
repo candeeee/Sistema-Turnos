@@ -1,0 +1,94 @@
+# ---------------------------------------------------------------------------
+# Dependencias
+# ---------------------------------------------------------------------------
+node_modules/
+.pnp
+.pnp.*
+.yarn/*
+!.yarn/patches
+!.yarn/releases
+!.yarn/plugins
+!.yarn/versions
+
+# ---------------------------------------------------------------------------
+# Build y caché
+# ---------------------------------------------------------------------------
+.next/
+out/
+build/
+dist/
+.turbo/
+.swc/
+*.tsbuildinfo
+
+# Lo genera Next en cada arranque. No se edita a mano y se recrea solo.
+next-env.d.ts
+
+# ---------------------------------------------------------------------------
+# Variables de entorno
+# ---------------------------------------------------------------------------
+# .env.example SÍ se commitea: es la plantilla que documenta cada variable.
+# Todo lo demás queda afuera. La clave secreta de Supabase ignora RLS: si
+# entra al repositorio, hay que rotarla desde Project Settings → API Keys.
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+.env*.local
+
+# ---------------------------------------------------------------------------
+# Supabase CLI
+# ---------------------------------------------------------------------------
+# Las migraciones SÍ se commitean: son el esquema del proyecto.
+# Lo que queda afuera es el estado local del CLI, que incluye el project ref
+# y credenciales de la base local.
+supabase/.branches/
+supabase/.temp/
+supabase/logs/
+supabase/seed.sql.bak
+
+# ---------------------------------------------------------------------------
+# Deploy
+# ---------------------------------------------------------------------------
+.vercel/
+.netlify/
+
+# ---------------------------------------------------------------------------
+# Registros y pruebas
+# ---------------------------------------------------------------------------
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+.pnpm-debug.log*
+coverage/
+.nyc_output/
+playwright-report/
+test-results/
+
+# ---------------------------------------------------------------------------
+# Certificados y llaves
+# ---------------------------------------------------------------------------
+*.pem
+*.key
+*.p12
+
+# ---------------------------------------------------------------------------
+# Editor y sistema operativo
+# ---------------------------------------------------------------------------
+.idea/
+.vscode/*
+!.vscode/extensions.json
+!.vscode/settings.json
+*.swp
+*.swo
+.DS_Store
+.DS_Store?
+._*
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+
+.agents/
