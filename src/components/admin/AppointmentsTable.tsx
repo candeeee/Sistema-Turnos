@@ -110,21 +110,21 @@ function Row({
   }
 
   return (
-    <li className="rounded-[var(--radius-card)] border border-line bg-surface p-5 shadow-soft transition-shadow duration-300 hover:shadow-lifted">
-      <div className="flex flex-wrap items-start justify-between gap-3">
-        <div className="min-w-0">
+    <li className="min-w-0 rounded-[var(--radius-card)] border border-line bg-surface p-4 shadow-soft transition-shadow duration-300 hover:shadow-lifted sm:p-5">
+      <div className="flex items-start justify-between gap-3">
+        <div className="min-w-0 flex-1">
           <p className="tnum text-sm">{formatDateTime(appointment.starts_at, timeZone)}</p>
           <p className="mt-1 truncate font-medium">
             {appointment.client?.full_name ?? 'Cliente eliminado'}
           </p>
-          <p className="tnum truncate text-sm text-muted">
+          <p className="tnum break-words text-sm text-muted">
             {appointment.client?.phone}
             {appointment.service && ` · ${appointment.service.name}`}
             {` · ${formatDuration(appointment.duration_min_snapshot)}`}
           </p>
         </div>
 
-        <div className="flex flex-col items-end gap-2">
+        <div className="flex shrink-0 flex-col items-end gap-2">
           <StatusBadge status={appointment.status} />
           <p className="tnum text-sm">{formatPrice(appointment.price_snapshot)}</p>
           {appointment.status === 'pending_confirmation' && (
@@ -136,7 +136,7 @@ function Row({
       </div>
 
       {appointment.client_notes && (
-        <p className="mt-3 rounded-xl bg-paper px-3 py-2 text-sm text-muted">
+        <p className="mt-3 break-words rounded-[var(--radius-soft)] bg-veil/60 px-3.5 py-2.5 text-sm text-muted">
           {appointment.client_notes}
         </p>
       )}
@@ -173,7 +173,7 @@ function Row({
       )}
 
       {!config.isTerminal && (
-        <div className="mt-4 flex flex-wrap items-center gap-2">
+        <div className="mt-4 flex flex-col gap-2 sm:flex-row sm:items-center">
           <label className="sr-only" htmlFor={`estado-${appointment.id}`}>
             Cambiar estado
           </label>
@@ -182,7 +182,7 @@ function Row({
             value={appointment.status}
             disabled={isPending}
             onChange={(event) => changeStatus(event.target.value as AppointmentStatus)}
-            className="rounded-full border border-line bg-surface px-4 py-2 text-sm transition-colors duration-200 hover:border-ink"
+            className="w-full min-w-0 rounded-full border border-line bg-surface px-4 py-2.5 text-sm transition-colors duration-300 hover:border-ink sm:w-auto"
           >
             {APPOINTMENT_STATUSES.map((status) => (
               <option key={status} value={status}>
@@ -194,7 +194,7 @@ function Row({
           <Button
             type="button"
             variant="secondary"
-            className="px-4 py-2 text-sm"
+            className="w-full px-5 py-2.5 text-sm sm:w-auto"
             onClick={() => setPanel(panel === 'move' ? 'none' : 'move')}
           >
             Mover
@@ -203,14 +203,19 @@ function Row({
       )}
 
       {panel === 'move' && (
-        <div className="mt-3 flex flex-wrap items-center gap-2">
+        <div className="mt-3 flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center">
           <input
             type="datetime-local"
             value={moveValue}
             onChange={(event) => setMoveValue(event.target.value)}
-            className="tnum rounded-xl border border-line bg-surface px-3 py-2 text-sm"
+            className="tnum w-full min-w-0 rounded-[var(--radius-soft)] border border-line bg-surface px-3.5 py-2.5 text-sm sm:w-auto"
           />
-          <Button type="button" className="px-4 py-2 text-sm" onClick={move} disabled={isPending}>
+          <Button
+            type="button"
+            className="w-full px-5 py-2.5 text-sm sm:w-auto"
+            onClick={move}
+            disabled={isPending}
+          >
             {isPending ? 'Moviendo…' : 'Guardar'}
           </Button>
           <p className="w-full text-xs text-muted">

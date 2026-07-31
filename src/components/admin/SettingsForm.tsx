@@ -13,10 +13,10 @@ import { SubmitButton } from '@/components/ui/Button'
 
 function Section({ title, hint, children }: { title: string; hint?: string; children: React.ReactNode }) {
   return (
-    <section className="rounded-[var(--radius-card)] border border-line bg-surface p-5 sm:p-6">
+    <section className="min-w-0 rounded-[var(--radius-card)] border border-line bg-surface p-4 shadow-soft sm:p-6">
       <h2 className="text-xs uppercase tracking-[0.15em] text-muted">{title}</h2>
       {hint && <p className="mt-2 text-sm text-muted">{hint}</p>}
-      <div className="mt-5 grid gap-4 sm:grid-cols-2">{children}</div>
+      <div className="mt-5 grid min-w-0 gap-4 sm:grid-cols-2">{children}</div>
     </section>
   )
 }
@@ -199,8 +199,11 @@ export function SettingsForm({ settings }: { settings: BusinessSettings }) {
         <input type="hidden" name="remindersEnabled" value="on" />
       )}
 
-      <div className="sticky bottom-4 flex justify-end">
-        <SubmitButton pendingLabel="Guardando…">Guardar configuración</SubmitButton>
+      {/* En celular el botón queda fijo sobre la barra de navegación. */}
+      <div className="sticky bottom-20 z-10 flex justify-stretch sm:justify-end lg:bottom-4">
+        <SubmitButton pendingLabel="Guardando…" className="w-full sm:w-auto">
+          Guardar configuración
+        </SubmitButton>
       </div>
     </form>
   )

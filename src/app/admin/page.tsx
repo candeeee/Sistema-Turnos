@@ -21,11 +21,13 @@ export default async function AdminDashboardPage() {
   return (
     <div className="flex flex-col gap-10">
       <header>
-        <h1 className="font-display text-3xl sm:text-4xl">Dashboard</h1>
-        <p className="mt-2 text-sm text-muted">Cómo viene la agenda hoy.</p>
+        <p className="text-[11px] uppercase tracking-[0.18em] text-muted">Resumen</p>
+        <h1 className="mt-2 font-display text-3xl font-light sm:text-4xl lg:text-5xl">
+          Cómo viene el día
+        </h1>
       </header>
 
-      <section aria-label="Métricas" className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      <section aria-label="Métricas" className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4">
         <StatCard label="Hoy" value={stats.today} href="/admin/calendario?vista=dia" index={0} />
         <StatCard
           label="Mañana"
@@ -83,19 +85,24 @@ export default async function AdminDashboardPage() {
               <li key={appointment.id}>
                 <Link
                   href={`/admin/turnos?buscar=${encodeURIComponent(appointment.client?.phone ?? '')}`}
-                  className="flex flex-wrap items-center gap-x-4 gap-y-1 rounded-[var(--radius-card)] border border-line bg-surface px-5 py-3.5 transition-colors duration-200 hover:border-ink"
+                  className="flex items-center gap-4 rounded-[var(--radius-card)] border border-line bg-surface px-4 py-3.5 shadow-soft transition-all duration-300 hover:border-accent/40 sm:px-5"
                 >
-                  <span className="tnum text-lg">
+                  <span className="tnum shrink-0 font-display text-2xl font-light">
                     {formatTime(appointment.starts_at, settings.timezone)}
                   </span>
-                  <span className="min-w-0 flex-1 truncate text-sm">
-                    {appointment.client?.full_name ?? 'Cliente eliminado'}
-                    <span className="text-muted"> · {appointment.service?.name}</span>
+
+                  <span className="min-w-0 flex-1">
+                    <span className="block truncate text-sm">
+                      {appointment.client?.full_name ?? 'Cliente eliminado'}
+                    </span>
+                    <span className="tnum block truncate text-xs text-muted">
+                      {appointment.service?.name} · {formatPrice(appointment.price_snapshot)}
+                    </span>
                   </span>
-                  <span className="tnum text-sm text-muted">
-                    {formatPrice(appointment.price_snapshot)}
+
+                  <span className="shrink-0">
+                    <StatusBadge status={appointment.status} />
                   </span>
-                  <StatusBadge status={appointment.status} />
                 </Link>
               </li>
             ))}
@@ -115,9 +122,9 @@ export default async function AdminDashboardPage() {
               const width = Math.round((service.total / max) * 100)
 
               return (
-                <li key={service.name} className="flex items-center gap-4">
-                  <span className="w-40 shrink-0 truncate text-sm">{service.name}</span>
-                  <span className="h-2 flex-1 overflow-hidden rounded-full bg-line">
+                <li key={service.name} className="flex items-center gap-3 sm:gap-4">
+                  <span className="w-24 shrink-0 truncate text-sm sm:w-40">{service.name}</span>
+                  <span className="h-2 min-w-0 flex-1 overflow-hidden rounded-full bg-line">
                     <span
                       className="block h-full rounded-full bg-accent transition-all duration-700 ease-[var(--ease-soft)]"
                       style={{ width: `${width}%` }}

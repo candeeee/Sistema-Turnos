@@ -41,9 +41,9 @@ export function HoursEditor({ hours }: { hours: Tables<'business_hours'>[] }) {
           return (
             <div
               key={label}
-              className="flex flex-wrap items-center gap-x-4 gap-y-2 border-b border-line px-5 py-3.5 last:border-0"
+              className="flex flex-wrap items-center gap-x-4 gap-y-2 border-b border-line px-4 py-3.5 last:border-0 sm:px-5"
             >
-              <span className="w-24 text-sm">{label}</span>
+              <span className="w-20 shrink-0 text-sm sm:w-24">{label}</span>
 
               {franjas.length === 0 ? (
                 <span className="text-sm text-muted">Cerrado</span>
@@ -75,7 +75,7 @@ export function HoursEditor({ hours }: { hours: Tables<'business_hours'>[] }) {
 
       <form
         action={formAction}
-        className="flex flex-wrap items-end gap-3 rounded-[var(--radius-card)] border border-line bg-surface p-5"
+        className="grid grid-cols-2 items-end gap-3 rounded-[var(--radius-card)] border border-line bg-surface p-4 shadow-soft sm:flex sm:flex-wrap sm:p-5"
       >
         {state.error && (
           <div className="w-full">
@@ -83,7 +83,7 @@ export function HoursEditor({ hours }: { hours: Tables<'business_hours'>[] }) {
           </div>
         )}
 
-        <div className="flex flex-col gap-1.5">
+        <div className="col-span-2 flex min-w-0 flex-col gap-1.5">
           <label htmlFor="weekday" className="text-xs text-muted">
             Día
           </label>
@@ -129,9 +129,15 @@ export function HoursEditor({ hours }: { hours: Tables<'business_hours'>[] }) {
           />
         </div>
 
-        <SubmitButton pendingLabel="Agregando…" variant="secondary" className="text-sm">
-          Agregar franja
-        </SubmitButton>
+        <div className="col-span-2 sm:col-auto">
+          <SubmitButton
+            pendingLabel="Agregando…"
+            variant="secondary"
+            className="w-full text-sm sm:w-auto"
+          >
+            Agregar franja
+          </SubmitButton>
+        </div>
 
         {state.fieldErrors?.closesAt && (
           <p className="w-full text-xs text-status-cancelled">{state.fieldErrors.closesAt}</p>
@@ -168,12 +174,12 @@ export function ExceptionsEditor({
           {exceptions.map((exception) => (
             <li
               key={exception.id}
-              className="flex flex-wrap items-center gap-x-4 gap-y-1 rounded-[var(--radius-card)] border border-line bg-surface px-5 py-3.5"
+              className="flex min-w-0 flex-wrap items-center gap-x-4 gap-y-1.5 rounded-[var(--radius-card)] border border-line bg-surface px-4 py-4 shadow-soft sm:px-5"
             >
-              <span className="rounded-full bg-paper px-3 py-1 text-xs">
+              <span className="shrink-0 rounded-full bg-veil px-3 py-1 text-xs">
                 {SCHEDULE_EXCEPTION_LABEL[exception.type]}
               </span>
-              <span className="tnum flex-1 text-sm">
+              <span className="tnum min-w-0 flex-1 break-words text-sm">
                 {formatDateTime(exception.starts_at, timeZone)} →{' '}
                 {formatDateTime(exception.ends_at, timeZone)}
               </span>
@@ -195,7 +201,7 @@ export function ExceptionsEditor({
 
       <form
         action={formAction}
-        className="grid gap-3 rounded-[var(--radius-card)] border border-line bg-surface p-5 sm:grid-cols-2 lg:grid-cols-4"
+        className="grid gap-3 rounded-[var(--radius-card)] border border-line bg-surface p-4 shadow-soft sm:grid-cols-2 sm:p-5 lg:grid-cols-4"
       >
         {state.error && (
           <div className="sm:col-span-2 lg:col-span-4">

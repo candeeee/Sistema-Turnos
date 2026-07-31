@@ -64,7 +64,7 @@ function MessageField({
   })
 
   return (
-    <div className="rounded-[var(--radius-card)] border border-line bg-surface p-6 shadow-soft">
+    <div className="min-w-0 rounded-[var(--radius-card)] border border-line bg-surface p-4 shadow-soft sm:p-6">
       <label htmlFor={name} className="font-display text-xl font-light">
         {label}
       </label>
@@ -82,7 +82,7 @@ function MessageField({
 
       <div className="mt-4 rounded-[var(--radius-soft)] bg-accent-soft/60 p-4">
         <p className="text-[11px] uppercase tracking-[0.16em] text-accent-ink">Vista previa</p>
-        <p className="mt-2 whitespace-pre-line text-sm leading-relaxed text-ink">
+        <p className="mt-2 whitespace-pre-line break-words text-sm leading-relaxed text-ink">
           {preview || 'Escribí el mensaje para ver cómo queda.'}
         </p>
       </div>
@@ -106,8 +106,8 @@ function Toggle({
   const [enabled, setEnabled] = useState(defaultChecked)
 
   return (
-    <div className="rounded-[var(--radius-card)] border border-line bg-surface p-6 shadow-soft">
-      <label className="flex cursor-pointer items-start justify-between gap-5">
+    <div className="min-w-0 rounded-[var(--radius-card)] border border-line bg-surface p-4 shadow-soft sm:p-6">
+      <label className="flex cursor-pointer items-start justify-between gap-4">
         <span>
           <span className="block font-display text-xl font-light">{label}</span>
           <span className="mt-1 block text-sm leading-relaxed text-muted">{description}</span>
@@ -266,8 +266,10 @@ export function NotificationsForm({ settings }: { settings: BusinessSettings }) 
         </div>
       </section>
 
-      <div className="sticky bottom-4 flex justify-end">
-        <SubmitButton pendingLabel="Guardando…">Guardar notificaciones</SubmitButton>
+      <div className="sticky bottom-20 z-10 flex justify-stretch sm:justify-end lg:bottom-4">
+        <SubmitButton pendingLabel="Guardando…" className="w-full sm:w-auto">
+          Guardar notificaciones
+        </SubmitButton>
       </div>
     </form>
   )

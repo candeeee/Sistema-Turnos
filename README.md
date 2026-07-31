@@ -118,6 +118,7 @@ npm run dev
 | `npm run check:types` | Verifica que `database.types.ts` siga siendo un archivo generado |
 | `npm run check:deps` | Confirma que las versiones de Supabase sean las declaradas |
 | `npm run check:queries` | Busca `select()` sin literal, que rompen la inferencia |
+| `npm run check:responsive` | Busca patrones que desbordan la pantalla en celular |
 | `npm run verify` | Corre la misma secuencia que Vercel: tipos, consultas y build |
 | `npm run db:push` | Aplica las migraciones pendientes |
 | `npm run db:reset` | Recrea la base local desde cero |
@@ -441,7 +442,62 @@ mezclarse, y el middleware la respalda: un administrador que escriba
 
 ---
 
+## 7.8 Diseño del panel en celular
+
+El panel es una herramienta de trabajo que se usa tanto desde el mostrador
+como desde el teléfono. Su estructura cambia según el ancho:
+
+| | Celular | Escritorio (lg) |
+|---|---|---|
+| Navegación | Barra inferior fija, 4 accesos + "Más" | Columna lateral con los 9 |
+| Encabezado | Barra superior con el nombre de la pantalla | El título de cada página |
+| Métricas | 2 columnas | 4 columnas |
+| Filtros de turnos | Plegados en un `<details>` | Siempre visibles |
+| Acciones de cada fila | Ancho completo, apiladas | En línea, a la derecha |
+
+**Por qué la navegación va abajo en celular.** En una pantalla sostenida con
+una mano, el borde inferior es la zona más cómoda del alcance del pulgar y el
+superior es la menos. La navegación que se usa todo el día va donde la mano
+ya está. Los cuatro accesos diarios —inicio, agenda, turnos, clientes— ocupan
+la barra; las pantallas de configuración viven en la hoja "Más", porque se
+visitan de vez en cuando y no merecen un lugar permanente.
+
+**Por qué los filtros están plegados.** Cinco campos ocupaban la pantalla
+entera antes de mostrar un solo turno. El `<details>` se abre solo si hay
+filtros activos, así quien llega desde un enlace filtrado entiende por qué el
+listado está recortado. No usa JavaScript.
+
+### La causa real del desborde horizontal
+
+Casi siempre es la misma, y no es de Tailwind sino de CSS: **un hijo de flex o
+de grid tiene `min-width: auto`, así que se niega a encogerse por debajo del
+ancho de su contenido.** Una tabla ancha, un email largo o un input de fecha
+adentro estiran el contenedor, y de ahí la página entera.
+
+```tsx
+<section className="overflow-x-auto">      // ❌ no contiene nada
+<section className="min-w-0 overflow-x-auto">  // ✅ ahora sí scrollea
+```
+
+Por eso el layout del panel, el `main` y cada contenedor de listado llevan
+`min-w-0`. `npm run check:responsive` marca los lugares donde falta.
+
+Como respaldo, `globals.css` fija `overflow-x: clip` en `html` y `body`, los
+campos de fecha y hora llevan `min-width: 0` —en iOS conservan un ancho
+intrínseco propio y desbordan la tarjeta— y los párrafos y títulos
+`overflow-wrap: break-word`, porque una palabra sin espacios rompe cualquier
+caja.
+
+---
+
 ## 8. Decisiones técnicas
+
+**¿Por qué el entorno se valida con getters y no al importar el módulo?**
+Porque un `throw` en el nivel superior de un módulo rompe el build de Next, no
+solo el renderizado: al construir `/_not-found` se importa el layout raíz y
+toda su cadena, y el error llega como `Failed to collect page data`, sin
+mencionar la variable que falta. Validar en el primer acceso conserva el mismo
+mensaje claro y no puede tumbar una compilación.
 
 **¿Por qué las versiones de Supabase están fijadas exactas?**
 Porque el archivo de tipos solo puede coincidir con un sistema de tipos, y
@@ -886,6 +942,23 @@ clave no es de este proyecto". Las causas, en orden de frecuencia:
 5. Editaste `.env.local` sin reiniciar `npm run dev`. Next lee las variables
    solo al arrancar.
 
+**`Failed to collect page data for /_not-found`** (build de Vercel)
+Un módulo lanzó **al importarse**, no al renderizarse. Next construye
+`/_not-found` importando el layout raíz, así que cualquier excepción en la
+cadena de imports mata el build con este mensaje, que no menciona la causa.
+
+El caso típico es código en el nivel superior de un archivo —fuera de toda
+función— que puede fallar: validaciones de entorno, lecturas de `process.env`,
+clientes creados como constante del módulo.
+
+Por eso `src/lib/env.ts` valida de forma **perezosa**, con getters: la
+comprobación ocurre cuando alguien lee el valor, no al importar. Una variable
+ausente se manifiesta al crear el cliente de Supabase, con un mensaje que la
+nombra, en lugar de tumbar la compilación.
+
+Si escribís un módulo nuevo, mantené esa regla: **importar no debe poder
+fallar.**
+
 **`TypeError: Failed to fetch`**
 No es un error de la aplicación: es el navegador informando que una petición
 murió sin respuesta HTTP. **El error real está en la terminal donde corre
@@ -1075,6 +1148,55 @@ Seguridad
 ---
 
 ## 14. Changelog
+
+### 2026-07-31 · Panel en celular
+
+**Navegación**
+- Barra inferior fija con los cuatro accesos diarios y una hoja "Más" para las
+  pantallas de configuración. La columna lateral queda solo en escritorio.
+- Barra superior de celular con el nombre de la pantalla actual: con la
+  navegación abajo, arriba solo hace falta decir dónde estás.
+- El contenido reserva `pb-24` para no quedar tapado, y la barra respeta
+  `env(safe-area-inset-bottom)` del iPhone.
+
+**Desbordes corregidos**
+- `min-w-0` en el layout, el `main` y cada contenedor de listado. Sin él, un
+  hijo de flex o grid se niega a encogerse y estira la página entera.
+- El calendario mensual tiene `min-w-[640px]` a propósito, pero su contenedor
+  no podía contener el scroll: le faltaba `min-w-0`.
+- `min-w-52` en el diagnóstico y `w-40` en el ranking del dashboard no entran
+  en 360px. Ahora son responsive o se apilan.
+- Los campos de fecha y hora conservaban su ancho intrínseco en iOS.
+
+**Adaptaciones**
+- Métricas del dashboard y resumen del cliente: dos columnas en celular en vez
+  de una, para no dejar la pantalla vacía.
+- Filtros de turnos plegados en un `<details>`, abierto si hay filtros activos.
+- Acciones de cada turno y de cada servicio a ancho completo en celular.
+- Botones de guardar fijos sobre la barra de navegación, no debajo.
+- Vista semanal del calendario: dos columnas en celular, tres en tablet.
+
+**Agregado**
+- `npm run check:responsive`: detecta anchos fijos sin variante responsive y
+  `overflow-x-auto` sin `min-w-0`, las dos causas del desborde horizontal.
+
+### 2026-07-31 · El build de Vercel y los módulos que lanzan
+
+**Corregido**
+- `Failed to collect page data for /_not-found`. `src/lib/env.ts` validaba las
+  variables en el nivel superior del módulo, así que lanzaba **al importarse**.
+  Next importa el layout raíz para construir `/_not-found`, y cualquier
+  excepción en esa cadena mata el build con un mensaje que no menciona la
+  causa. La validación pasó a getters: ocurre en el primer acceso real.
+- Las comprobaciones de forma de la URL y de la clave pasaron de `throw` a
+  aviso. Un dominio propio o un formato de clave nuevo son legítimos y no
+  deberían impedir que el proyecto arranque. La única que sigue deteniendo
+  todo es la clave secreta cargada en una variable `NEXT_PUBLIC_`, que expone
+  la base entera.
+- `serviceImageUrl()` devuelve `null` sin entorno configurado en lugar de
+  lanzar: una tarjeta sin foto es mejor que una página caída.
+- `generateMetadata` ni siquiera intenta la consulta si faltan las variables,
+  para no llenar el log del build de errores que no son del código.
 
 ### 2026-07-31 · Versiones de Supabase y errores en cascada
 

@@ -20,13 +20,13 @@ export default async function ClientsPage({
   return (
     <div className="flex flex-col gap-6">
       <header>
-        <h1 className="font-display text-3xl sm:text-4xl">Clientes</h1>
-        <p className="mt-1 text-sm text-muted">
+        <p className="text-[11px] uppercase tracking-[0.18em] text-muted">
           {clients.length} {clients.length === 1 ? 'cliente' : 'clientes'}
         </p>
+        <h1 className="mt-2 font-display text-3xl font-light sm:text-4xl lg:text-5xl">Clientes</h1>
       </header>
 
-      <form role="search" className="flex gap-2">
+      <form role="search" className="flex min-w-0 gap-2">
         <label htmlFor="buscar" className="sr-only">
           Buscar cliente
         </label>
@@ -35,11 +35,11 @@ export default async function ClientsPage({
           name="buscar"
           defaultValue={params.buscar ?? ''}
           placeholder="Nombre, teléfono o email"
-          className="flex-1 rounded-xl border border-line bg-surface px-4 py-2.5 text-sm"
+          className="min-w-0 flex-1 rounded-[var(--radius-soft)] border border-transparent bg-veil/50 px-4 py-2.5 text-sm transition-colors duration-300 focus:border-accent/60 focus:bg-surface focus:outline-none"
         />
         <button
           type="submit"
-          className="rounded-full bg-accent px-5 py-2.5 text-sm font-medium text-white transition-colors duration-200 hover:bg-accent-hover"
+          className="shrink-0 rounded-full bg-accent px-5 py-2.5 text-sm font-medium text-white shadow-soft transition-all duration-300 hover:bg-accent-hover active:scale-[0.98]"
         >
           Buscar
         </button>
@@ -55,34 +55,37 @@ export default async function ClientsPage({
             <li key={client.id}>
               <Link
                 href={`/admin/clientes/${client.id}`}
-                className="flex flex-wrap items-center gap-x-5 gap-y-1 rounded-[var(--radius-card)] border border-line bg-surface px-5 py-4 transition-colors duration-200 hover:border-ink"
+                className="block min-w-0 rounded-[var(--radius-card)] border border-line bg-surface px-4 py-4 shadow-soft transition-all duration-300 hover:border-accent/40 sm:px-5"
               >
-                <span className="min-w-0 flex-1">
-                  <span className="block truncate font-medium">{client.full_name}</span>
-                  <span className="tnum block truncate text-sm text-muted">
-                    {client.phone}
-                    {client.email && ` · ${client.email}`}
+                {/* Nombre y contacto arriba, métricas debajo: en celular una
+                    sola fila con cinco datos obligaba a scroll horizontal. */}
+                <div className="flex items-start justify-between gap-3">
+                  <span className="min-w-0 flex-1">
+                    <span className="block truncate font-medium">{client.full_name}</span>
+                    <span className="tnum block truncate text-sm text-muted">
+                      {client.phone}
+                      {client.email && ` · ${client.email}`}
+                    </span>
                   </span>
-                </span>
 
-                <span className="tnum text-sm text-muted">
-                  {client.total_appointments} turnos
-                  {client.no_show_count > 0 && (
-                    <span className="text-status-noshow"> · {client.no_show_count} sin asistir</span>
+                  {client.upcoming_count > 0 && (
+                    <span className="tnum shrink-0 rounded-full bg-accent-soft px-3 py-1 text-xs text-accent-ink">
+                      {client.upcoming_count} próximo{client.upcoming_count > 1 ? 's' : ''}
+                    </span>
                   )}
-                </span>
+                </div>
 
-                {client.upcoming_count > 0 && (
-                  <span className="tnum rounded-full bg-accent-soft px-3 py-1 text-xs text-accent">
-                    {client.upcoming_count} próximo{client.upcoming_count > 1 ? 's' : ''}
-                  </span>
-                )}
-
-                {client.last_visit && (
-                  <span className="tnum text-xs text-muted">
-                    Última visita {formatDateTime(client.last_visit, settings.timezone)}
-                  </span>
-                )}
+                <div className="tnum mt-2.5 flex flex-wrap gap-x-4 gap-y-1 text-xs text-muted">
+                  <span>{client.total_appointments} turnos</span>
+                  {client.no_show_count > 0 && (
+                    <span className="text-status-noshow">
+                      {client.no_show_count} sin asistir
+                    </span>
+                  )}
+                  {client.last_visit && (
+                    <span>Última visita {formatDateTime(client.last_visit, settings.timezone)}</span>
+                  )}
+                </div>
               </Link>
             </li>
           ))}

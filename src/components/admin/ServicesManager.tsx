@@ -162,8 +162,10 @@ export function ServicesManager({ services }: { services: Service[] }) {
 
   return (
     <div className="flex flex-col gap-4">
-      <div className="flex justify-end">
-        <Button onClick={() => setCreating(true)}>Nuevo servicio</Button>
+      <div className="flex justify-stretch sm:justify-end">
+        <Button onClick={() => setCreating(true)} className="w-full sm:w-auto">
+          Nuevo servicio
+        </Button>
       </div>
 
       {error && <FormAlert tone="error">{error}</FormAlert>}
@@ -177,11 +179,11 @@ export function ServicesManager({ services }: { services: Service[] }) {
           {services.map((service) => (
             <li
               key={service.id}
-              className={`flex flex-wrap items-center gap-x-5 gap-y-2 rounded-[var(--radius-card)] border border-line bg-surface px-5 py-4 ${
+              className={`min-w-0 rounded-[var(--radius-card)] border border-line bg-surface px-4 py-4 shadow-soft sm:px-5 ${
                 service.is_active ? '' : 'opacity-60'
               }`}
             >
-              <span className="min-w-0 flex-1">
+              <span className="block min-w-0">
                 <span className="block truncate font-medium">
                   {service.name}
                   {service.is_featured && (
@@ -196,25 +198,27 @@ export function ServicesManager({ services }: { services: Service[] }) {
                 </span>
               </span>
 
-              <div className="flex flex-wrap gap-2">
+              {/* Los botones ocupan el ancho completo en celular: tres
+                  controles en fila obligaban a scroll horizontal. */}
+              <div className="mt-3 grid grid-cols-3 gap-2 border-t border-line pt-3 sm:mt-4 sm:flex sm:justify-end sm:border-0 sm:pt-0">
                 <Button
                   variant="secondary"
-                  className="px-4 py-2 text-sm"
+                  className="px-3 py-2 text-sm sm:px-5"
                   onClick={() => setEditing(service)}
                 >
                   Editar
                 </Button>
                 <Button
                   variant="ghost"
-                  className="px-4 py-2 text-sm"
+                  className="px-3 py-2 text-sm sm:px-5"
                   onClick={() => toggle(service)}
                   disabled={isPending}
                 >
-                  {service.is_active ? 'Desactivar' : 'Activar'}
+                  {service.is_active ? 'Pausar' : 'Activar'}
                 </Button>
                 <Button
                   variant="ghost"
-                  className="px-4 py-2 text-sm"
+                  className="px-3 py-2 text-sm sm:px-5"
                   onClick={() => remove(service)}
                   disabled={isPending}
                 >

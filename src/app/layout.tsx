@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from 'next'
 import { Cormorant_Garamond, Plus_Jakarta_Sans } from 'next/font/google'
 
 import { getBusinessSettings } from '@/lib/services/settings'
+import { hasSupabaseConfig } from '@/lib/env'
 import './globals.css'
 
 /**
@@ -42,14 +43,19 @@ export const viewport: Viewport = {
 export async function generateMetadata(): Promise<Metadata> {
   let settings: Awaited<ReturnType<typeof getBusinessSettings>> | null = null
 
-  try {
-    settings = await getBusinessSettings()
-  } catch (error) {
-    console.error(
-      '\n✖ [generateMetadata] No se pudo leer la configuración del negocio. ' +
-        'Se usan metadatos por defecto.',
-      error,
-    )
+  // Sin variables de entorno no hay nada que consultar: es el caso de una
+  // compilación antes de configurarlas. Se evita el intento para no llenar el
+  // log del build de errores que no son del código.
+  if (hasSupabaseConfig()) {
+    try {
+      settings = await getBusinessSettings()
+    } catch (error) {
+      console.error(
+        '\n✖ [generateMetadata] No se pudo leer la configuración del negocio. ' +
+          'Se usan metadatos por defecto.',
+        error,
+      )
+    }
   }
 
   const name = settings?.name || 'Reservá tu turno'

@@ -137,14 +137,14 @@ function DayAgenda({ items, timeZone }: { items: AdminAppointment[]; timeZone: s
             className="absolute inset-x-0 flex items-center gap-4"
             style={{ top: (minuto - desde) * PX_POR_MINUTO }}
           >
-            <span className="tnum w-12 shrink-0 text-right text-xs text-muted">
+            <span className="tnum w-10 shrink-0 text-right text-[11px] text-muted sm:w-12 sm:text-xs">
               {String(Math.floor(minuto / 60)).padStart(2, '0')}:00
             </span>
             <span className="h-px flex-1 bg-line/70" />
           </div>
         ))}
 
-        <div className="absolute inset-y-0 left-16 right-0">
+        <div className="absolute inset-y-0 left-[3.25rem] right-0 sm:left-16">
           {items.map((item) => {
             const inicio = minutosDe(item.starts_at)
             const duracion = Math.max(minutosDe(item.ends_at) - inicio, 25)
@@ -207,13 +207,15 @@ export default async function CalendarPage({
 
   return (
     <div className="flex flex-col gap-6">
-      <header className="flex flex-wrap items-center justify-between gap-4">
-        <div>
+      <header className="flex min-w-0 flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+        <div className="min-w-0">
           <p className="text-[11px] uppercase tracking-[0.18em] text-muted">Agenda</p>
-          <h1 className="mt-2 font-display text-4xl font-light sm:text-5xl">{title(view, date)}</h1>
+          <h1 className="mt-2 font-display text-3xl font-light leading-tight sm:text-4xl lg:text-5xl">
+            {title(view, date)}
+          </h1>
         </div>
 
-        <div className="flex flex-wrap items-center gap-2">
+        <div className="flex shrink-0 flex-wrap items-center gap-2">
           <Link
             href={href(view, step(view, date, -1))}
             aria-label="Anterior"
@@ -258,7 +260,7 @@ export default async function CalendarPage({
 
       {/* Semana */}
       {view === 'semana' && (
-        <section className="grid gap-3 sm:grid-cols-2 lg:grid-cols-7">
+        <section className="grid grid-cols-2 gap-2.5 sm:grid-cols-3 lg:grid-cols-7">
           {weekDays.map((day) => {
             const list = byDay.get(day) ?? []
 
@@ -301,8 +303,15 @@ export default async function CalendarPage({
 
       {/* Mes */}
       {view === 'mes' && (
-        <section className="overflow-x-auto">
-          <div className="grid min-w-[640px] grid-cols-7 gap-px overflow-hidden rounded-[var(--radius-card)] border border-line bg-line shadow-soft">
+        {/* `min-w-0` es imprescindible: sin él, este hijo de flex se niega a
+            encogerse por debajo de los 640px de la grilla y estira la página
+            entera en lugar de scrollear dentro de su propia caja. */}
+        <section className="min-w-0 overflow-x-auto">
+          {/* min-w-[640px] es deliberado: siete columnas de un mes no entran
+              en una pantalla de celular, y comprimirlas las vuelve ilegibles.
+              La sección de arriba tiene `min-w-0 overflow-x-auto`, así que el
+              scroll queda dentro de esta caja y no estira la página. */}
+          <div className="grid min-w-[640px] grid-cols-7 gap-px overflow-hidden rounded-[var(--radius-card)] border border-line bg-line shadow-soft" /* responsive-ok */>
             {WEEKDAYS.map((label) => (
               <p
                 key={label}

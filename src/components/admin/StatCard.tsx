@@ -17,19 +17,21 @@ export function StatCard({
 }) {
   const content = (
     <>
-      <p className="text-xs uppercase tracking-[0.15em] text-muted">{label}</p>
+      <p className="truncate text-[10px] uppercase tracking-[0.15em] text-muted sm:text-xs">
+        {label}
+      </p>
       <p
-        className="tnum mt-3 text-4xl"
+        className="tnum mt-2 font-display text-3xl font-light sm:mt-3 sm:text-4xl"
         style={tone === 'alert' ? { color: 'var(--color-status-pending)' } : undefined}
       >
         {value}
       </p>
-      {hint && <p className="mt-1 text-xs text-muted">{hint}</p>}
+      {hint && <p className="mt-1 text-[11px] leading-snug text-muted">{hint}</p>}
     </>
   )
 
   const className =
-    'animate-rise block rounded-[var(--radius-card)] border border-line bg-surface p-5 transition-all duration-200 ease-[var(--ease-soft)]'
+    'animate-rise block min-w-0 rounded-[var(--radius-card)] border border-line bg-surface p-4 shadow-soft transition-all duration-300 ease-[var(--ease-soft)] sm:p-5'
 
   return href ? (
     <Link

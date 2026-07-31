@@ -369,10 +369,12 @@ export default async function DiagnosticsPage() {
   }, {})
 
   return (
-    <div className="flex flex-col gap-8">
+    <div className="flex min-w-0 flex-col gap-8">
       <header>
         <p className="text-[11px] uppercase tracking-[0.18em] text-muted">Instalación</p>
-        <h1 className="mt-3 font-display text-4xl font-light sm:text-5xl">Diagnóstico</h1>
+        <h1 className="mt-2 font-display text-3xl font-light sm:text-4xl lg:text-5xl">
+          Diagnóstico
+        </h1>
         <p className="mt-3 max-w-xl text-sm leading-relaxed text-muted">
           Cada prueba usa la misma conexión y los mismos permisos que el resto del panel. Un script
           en el SQL Editor corre como <span className="tnum">postgres</span> y puede dar verde
@@ -400,18 +402,25 @@ export default async function DiagnosticsPage() {
             {items.map((check) => (
               <li
                 key={`${grupo}-${check.nombre}`}
-                className="flex flex-wrap items-start gap-x-4 gap-y-1 rounded-[var(--radius-card)] border border-line bg-surface px-5 py-4 shadow-soft"
+                className="rounded-[var(--radius-card)] border border-line bg-surface px-4 py-4 shadow-soft sm:px-5"
               >
-                <span aria-hidden className="text-sm">
-                  {check.ok ? '✅' : '❌'}
-                </span>
-                <span className="tnum min-w-52 text-sm">{check.nombre}</span>
-                <span className="min-w-0 flex-1 text-sm leading-relaxed text-muted">
+                {/* En celular el nombre va arriba y el detalle debajo; en
+                    pantallas anchas comparten fila. Un ancho mínimo fijo
+                    desbordaba a 360px. */}
+                <div className="flex items-start gap-3">
+                  <span aria-hidden className="shrink-0 text-sm">
+                    {check.ok ? '✅' : '❌'}
+                  </span>
+                  <span className="min-w-0 flex-1 break-words text-sm">{check.nombre}</span>
+                  {check.code && (
+                    <span className="tnum shrink-0 rounded-full bg-veil px-2.5 py-1 text-xs">
+                      {check.code}
+                    </span>
+                  )}
+                </div>
+                <p className="mt-1.5 break-words pl-7 text-sm leading-relaxed text-muted">
                   {check.detalle}
-                </span>
-                {check.code && (
-                  <span className="tnum rounded-full bg-veil px-2.5 py-1 text-xs">{check.code}</span>
-                )}
+                </p>
               </li>
             ))}
           </ul>

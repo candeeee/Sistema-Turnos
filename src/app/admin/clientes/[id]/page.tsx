@@ -51,10 +51,12 @@ export default async function ClientDetailPage({
         ← Clientes
       </Link>
 
-      <header className="flex flex-wrap items-start justify-between gap-4">
-        <div>
-          <h1 className="font-display text-3xl sm:text-4xl">{client.full_name}</h1>
-          <p className="tnum mt-2 text-sm text-muted">
+      <header className="flex min-w-0 flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+        <div className="min-w-0">
+          <h1 className="break-words font-display text-3xl font-light sm:text-4xl">
+            {client.full_name}
+          </h1>
+          <p className="tnum mt-2 break-words text-sm text-muted">
             {client.phone}
             {client.email && ` · ${client.email}`}
           </p>
@@ -69,14 +71,14 @@ export default async function ClientDetailPage({
             href={whatsapp}
             target="_blank"
             rel="noopener noreferrer"
-            className="rounded-full bg-accent px-5 py-2.5 text-sm font-medium text-white transition-colors duration-200 hover:bg-accent-hover"
+            className="shrink-0 rounded-full bg-accent px-6 py-3 text-center text-sm font-medium text-white shadow-soft transition-all duration-300 hover:bg-accent-hover active:scale-[0.98]"
           >
             Escribir por WhatsApp
           </a>
         )}
       </header>
 
-      <section aria-label="Resumen" className="grid gap-3 sm:grid-cols-4">
+      <section aria-label="Resumen" className="grid grid-cols-2 gap-3 sm:grid-cols-4">
         {[
           { label: 'Turnos', value: appointments.length },
           { label: 'Finalizados', value: completed.length },
@@ -85,10 +87,12 @@ export default async function ClientDetailPage({
         ].map((stat) => (
           <div
             key={stat.label}
-            className="rounded-[var(--radius-card)] border border-line bg-surface p-4"
+            className="min-w-0 rounded-[var(--radius-card)] border border-line bg-surface p-4 shadow-soft"
           >
-            <p className="text-xs uppercase tracking-[0.15em] text-muted">{stat.label}</p>
-            <p className="tnum mt-2 text-2xl">{stat.value}</p>
+            <p className="truncate text-[10px] uppercase tracking-[0.15em] text-muted">
+              {stat.label}
+            </p>
+            <p className="tnum mt-2 font-display text-2xl font-light">{stat.value}</p>
           </div>
         ))}
       </section>

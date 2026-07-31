@@ -12,9 +12,9 @@ export default async function SchedulePage() {
   ])
 
   return (
-    <div className="flex flex-col gap-10">
+    <div className="flex min-w-0 flex-col gap-10">
       <header>
-        <h1 className="font-display text-3xl sm:text-4xl">Horarios</h1>
+        <h1 className="font-display text-3xl font-light sm:text-4xl lg:text-5xl">Horarios</h1>
         <p className="mt-1 text-sm text-muted">
           De acá salen los horarios que ve el cliente al reservar. Un día sin franjas es un día
           cerrado.

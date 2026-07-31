@@ -34,7 +34,7 @@ export default function AdminError({
         <h1 className="mt-3 font-display text-3xl">No pudimos cargar esta pantalla</h1>
       </header>
 
-      <pre className="overflow-x-auto whitespace-pre-wrap rounded-[var(--radius-card)] border border-line bg-surface p-5 text-sm">
+      <pre className="min-w-0 overflow-x-auto whitespace-pre-wrap break-words rounded-[var(--radius-card)] border border-line bg-surface p-5 text-sm">
         {error.message}
       </pre>
 

@@ -71,6 +71,16 @@
     -webkit-text-size-adjust: 100%;
   }
 
+  html,
+  body {
+    /* Última red contra el desborde horizontal. La solución real es `min-w-0`
+       en los contenedores de flex y grid —sin él, un hijo se niega a
+       encogerse por debajo del ancho de su contenido y estira la página—,
+       pero esto evita que un descuido futuro rompa la experiencia entera. */
+    max-width: 100%;
+    overflow-x: clip;
+  }
+
   body {
     background-color: var(--color-paper);
     color: var(--color-ink);
@@ -106,11 +116,32 @@
   }
 
   /* Los inputs no bajan de 16px: iOS hace zoom automático por debajo de ese
-     tamaño y rompe la sensación de aplicación. */
+     tamaño y rompe la sensación de aplicación. `max-width: 100%` evita que un
+     campo de fecha o de hora, que traen un ancho intrínseco propio, empuje su
+     contenedor. */
   input,
   select,
   textarea {
     font-size: max(16px, 1em);
+    max-width: 100%;
+  }
+
+  /* Los campos de fecha y hora nativos no respetan `width: 100%` en iOS sin
+     esto: conservan su ancho intrínseco y desbordan la tarjeta. */
+  input[type='date'],
+  input[type='time'],
+  input[type='datetime-local'] {
+    min-width: 0;
+    -webkit-appearance: none;
+    appearance: none;
+  }
+
+  /* Palabras sin espacios —un email largo, una URL— rompen cualquier caja. */
+  p,
+  h1,
+  h2,
+  h3 {
+    overflow-wrap: break-word;
   }
 }
 

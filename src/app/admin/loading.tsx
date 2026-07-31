@@ -3,7 +3,7 @@ export default function AdminLoading() {
     <div className="flex flex-col gap-8" aria-busy="true" aria-live="polite">
       <div>
         <div className="skeleton h-3 w-20" />
-        <div className="skeleton mt-3 h-11 w-64" />
+        <div className="skeleton mt-3 h-11 w-full max-w-64" />
       </div>
 
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">

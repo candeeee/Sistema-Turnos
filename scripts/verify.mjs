@@ -56,8 +56,10 @@ const PASOS = [
     comando: 'npx',
     args: ['next', 'build'],
     siFalla:
-      'Si el error menciona una variable de entorno, cargala en Vercel:\n' +
-      '  Project → Settings → Environment Variables, y volvé a desplegar.\n' +
+      'Si dice "Failed to collect page data", un módulo lanzó AL IMPORTARSE, no al\n' +
+      '  renderizarse. Buscá código en el nivel superior de un archivo (fuera de toda\n' +
+      '  función) que pueda fallar: validaciones de entorno, lecturas de process.env,\n' +
+      '  clientes creados como constante del módulo.\n\n' +
       '  Si menciona una tabla o columna, faltan migraciones: npx supabase db push',
   },
 ]

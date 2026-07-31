@@ -18,8 +18,8 @@ export default function PublicLoading() {
       </div>
 
       <div className="mt-10 flex gap-3">
-        <div className="skeleton h-12 w-44 rounded-full" />
-        <div className="skeleton h-12 w-36 rounded-full" />
+        <div className="skeleton h-12 w-40 max-w-[45%] rounded-full" />
+        <div className="skeleton h-12 w-32 max-w-[40%] rounded-full" />
       </div>
 
       <div className="mt-20 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
