@@ -32,10 +32,8 @@ function archivos(directorio) {
 const REGLAS = [
   {
     // Un ancho mínimo grande sin variante responsive no entra en 360px.
-    // Se acepta si el contenedor declara scroll propio o si está justificado
-    // con un comentario `responsive-ok` en la línea anterior.
     patron: /min-w-(\[(?:[4-9]\d{2}|\d{4,})px\]|\d{2,})/,
-    excepcion: /sm:|md:|lg:|responsive-ok/,
+    excepcion: /sm:|md:|lg:/,
     aviso: 'ancho mínimo grande sin variante responsive',
   },
   {
@@ -54,20 +52,34 @@ const REGLAS = [
 
 const hallazgos = []
 
-for (const ruta of archivos(RAIZ)) {
-  readFileSync(ruta, 'utf8')
-    .split('\n')
-    .forEach((linea, indice) => {
-      // Los comentarios explican decisiones; no son código a revisar.
-      const limpia = linea.trim()
-      if (limpia.startsWith('//') || limpia.startsWith('*') || limpia.startsWith('{/*')) return
+/**
+ * Una decisión deliberada se justifica con `responsive-ok` en un comentario
+ * JSX sobre el elemento. Se busca en las seis líneas previas porque esos
+ * comentarios suelen ocupar varias.
+ *
+ * La marca NO puede ir dentro de la etiqueta: un `/* … *\/` entre atributos
+ * es válido para TypeScript pero SWC —el compilador de Next— lo rechaza, y
+ * el build falla con "Expected '</', got 'className'".
+ */
+function estaJustificada(lineas, indice) {
+  return lineas.slice(Math.max(0, indice - 6), indice).some((l) => l.includes('responsive-ok'))
+}
 
-      for (const regla of REGLAS) {
-        if (regla.patron.test(linea) && !regla.excepcion.test(linea)) {
-          hallazgos.push({ ruta, linea: indice + 1, aviso: regla.aviso, texto: linea.trim() })
-        }
+for (const ruta of archivos(RAIZ)) {
+  const lineas = readFileSync(ruta, 'utf8').split('\n')
+
+  lineas.forEach((linea, indice) => {
+    // Los comentarios explican decisiones; no son código a revisar.
+    const limpia = linea.trim()
+    if (limpia.startsWith('//') || limpia.startsWith('*') || limpia.startsWith('{/*')) return
+
+    for (const regla of REGLAS) {
+      if (regla.patron.test(linea) && !regla.excepcion.test(linea)) {
+        if (estaJustificada(lineas, indice)) continue
+        hallazgos.push({ ruta, linea: indice + 1, aviso: regla.aviso, texto: limpia })
       }
-    })
+    }
+  })
 }
 
 console.log('\nVerificación de diseño responsive\n' + '─'.repeat(64))

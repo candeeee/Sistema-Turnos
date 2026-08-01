@@ -301,17 +301,18 @@ export default async function CalendarPage({
         </section>
       )}
 
-      {/* Mes */}
+      {/*
+        Mes.
+        `min-w-0` en la sección es imprescindible: sin él, este hijo de flex se
+        niega a encogerse por debajo de los 640px de la grilla y estira la
+        página entera en lugar de scrollear dentro de su propia caja.
+      */}
       {view === 'mes' && (
-        {/* `min-w-0` es imprescindible: sin él, este hijo de flex se niega a
-            encogerse por debajo de los 640px de la grilla y estira la página
-            entera en lugar de scrollear dentro de su propia caja. */}
         <section className="min-w-0 overflow-x-auto">
-          {/* min-w-[640px] es deliberado: siete columnas de un mes no entran
-              en una pantalla de celular, y comprimirlas las vuelve ilegibles.
-              La sección de arriba tiene `min-w-0 overflow-x-auto`, así que el
-              scroll queda dentro de esta caja y no estira la página. */}
-          <div className="grid min-w-[640px] grid-cols-7 gap-px overflow-hidden rounded-[var(--radius-card)] border border-line bg-line shadow-soft" /* responsive-ok */>
+          {/* responsive-ok · min-w-[640px] es deliberado: siete columnas de un
+              mes no entran en una pantalla de celular y comprimirlas las
+              vuelve ilegibles. El scroll queda dentro de esta caja. */}
+          <div className="grid min-w-[640px] grid-cols-7 gap-px overflow-hidden rounded-[var(--radius-card)] border border-line bg-line shadow-soft">
             {WEEKDAYS.map((label) => (
               <p
                 key={label}

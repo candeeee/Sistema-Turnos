@@ -119,6 +119,8 @@ npm run dev
 | `npm run check:deps` | Confirma que las versiones de Supabase sean las declaradas |
 | `npm run check:queries` | Busca `select()` sin literal, que rompen la inferencia |
 | `npm run check:responsive` | Busca patrones que desbordan la pantalla en celular |
+| `npm run check:jsx` | Busca comentarios mal ubicados en JSX (sin dependencias) |
+| `npm run check:syntax` | Parsea con SWC, que es más estricto que `tsc` en JSX |
 | `npm run verify` | Corre la misma secuencia que Vercel: tipos, consultas y build |
 | `npm run db:push` | Aplica las migraciones pendientes |
 | `npm run db:reset` | Recrea la base local desde cero |
@@ -942,6 +944,46 @@ clave no es de este proyecto". Las causas, en orden de frecuencia:
 5. Editaste `.env.local` sin reiniciar `npm run dev`. Next lee las variables
    solo al arrancar.
 
+**`')' expected` en una línea con `className`**
+Un comentario JSX justo después de un paréntesis de apertura:
+
+```tsx
+{condicion && (
+  {/* nota */}      // ❌ el paréntesis espera UNA expresión
+  <section>…
+```
+
+Ahí `{…}` no es un comentario JSX sino un objeto literal. El comentario va
+**encima** del bloque completo:
+
+```tsx
+{/* nota */}
+{condicion && (
+  <section>…
+```
+
+**`Expected '</', got 'className'`** (build de Vercel)
+Es un error de sintaxis de JSX que `tsc --noEmit` **no detecta**. TypeScript y
+SWC —el compilador que usa Next— no aceptan exactamente lo mismo.
+
+El caso concreto: un comentario entre los atributos de una etiqueta.
+
+```tsx
+<div className="…" /* nota */>   // ✅ para tsc · ❌ para SWC
+```
+
+Por eso `npm run verify` puede dar verde y el build fallar igual. Se agregó
+`npm run check:syntax`, que parsea todos los archivos con SWC en segundos, y
+corre dentro de `verify` antes de la verificación de tipos.
+
+Para justificar una decisión de diseño, el comentario va **encima** del
+elemento, como comentario JSX:
+
+```tsx
+{/* responsive-ok · siete columnas no entran en un celular */}
+<div className="min-w-[640px] …">
+```
+
 **`Failed to collect page data for /_not-found`** (build de Vercel)
 Un módulo lanzó **al importarse**, no al renderizarse. Next construye
 `/_not-found` importando el layout raíz, así que cualquier excepción en la
@@ -1148,6 +1190,28 @@ Seguridad
 ---
 
 ## 14. Changelog
+
+### 2026-07-31 · Sintaxis de JSX y verificación
+
+**Corregido**
+- `Expected '</', got 'className'`: un comentario `/* responsive-ok */` entre
+  los atributos de una etiqueta. Válido para TypeScript, rechazado por SWC.
+- `')' expected` en el calendario: un comentario JSX justo después de
+  `{view === 'mes' && (`. Dentro de un paréntesis solo cabe una expresión, así
+  que ahí `{…}` se lee como objeto literal. El comentario pasó a estar encima
+  del bloque.
+
+**Agregado**
+- `npm run check:jsx`: detecta los dos patrones anteriores sin depender de
+  ninguna librería, así que corre siempre.
+- `npm run check:syntax`: parsea con SWC. Cubre el hueco entre `tsc --noEmit`
+  y el compilador real de Next, que era la razón por la que `verify` daba
+  verde y el deploy fallaba. Requiere `@swc/core`, ahora en devDependencies:
+  Next usa binarios por plataforma que no exponen API de parseo.
+- Cuando `@swc/core` falta, el paso avisa que **no** verificó en lugar de
+  mostrar un ✔. Un paso omitido que parece aprobado es peor que no tenerlo.
+- `check:responsive` busca la justificación `responsive-ok` en las líneas
+  previas, no dentro de la etiqueta.
 
 ### 2026-07-31 · Panel en celular
 

@@ -35,6 +35,22 @@ const PASOS = [
       '  y movés cualquier tipo propio a src/types/domain.ts',
   },
   {
+    nombre: 'Patrones de JSX',
+    comando: 'node',
+    args: ['scripts/check-jsx.mjs'],
+    siFalla:
+      'Un comentario mal ubicado en JSX rompe el build. Va ENCIMA del elemento,\n' +
+      '  nunca entre sus atributos ni justo después de un paréntesis de apertura.',
+  },
+  {
+    nombre: 'Sintaxis (SWC)',
+    comando: 'node',
+    args: ['scripts/check-syntax.mjs'],
+    siFalla:
+      'SWC es el compilador de Next y es más estricto que tsc en JSX. Un error acá\n' +
+      '  hace fallar el build de Vercel aunque la verificación de tipos dé verde.',
+  },
+  {
     nombre: 'Consultas con select literal',
     comando: 'node',
     args: ['scripts/check-queries.mjs'],
